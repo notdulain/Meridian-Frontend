@@ -68,21 +68,15 @@ export default function DeliveryDetailPage() {
         <div className="page-container">
             <div className="page-header">
                 <div className="page-header-left">
-                    <h1>Delivery #{delivery.id}</h1>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <h1>Delivery #{delivery.id}</h1>
+                        <span className={STATUS_BADGE[delivery.status]}>{delivery.status}</span>
+                    </div>
                     <p>Viewing delivery request details</p>
                 </div>
                 <button className="btn btn-secondary" onClick={() => router.back()}>
                     ← Back
                 </button>
-            </div>
-
-            <div className="card" style={{ maxWidth: 720, marginBottom: 20 }}>
-                <div className="card-header">
-                    <h2>Status</h2>
-                </div>
-                <div className="card-body">
-                    <span className={STATUS_BADGE[delivery.status]}>{delivery.status}</span>
-                </div>
             </div>
 
             <div className="card" style={{ maxWidth: 720, marginBottom: 20 }}>
