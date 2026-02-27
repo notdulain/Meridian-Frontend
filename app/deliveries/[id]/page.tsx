@@ -67,8 +67,53 @@ export default function DeliveryDetailPage() {
                 </button>
             </div>
 
-            {/* Details will be added in next steps */}
-            <p style={{ color: "var(--color-text-muted)" }}>Delivery loaded — details coming next.</p>
+            <div className="card" style={{ maxWidth: 720 }}>
+                <div className="card-header">
+                    <h2>Delivery Details</h2>
+                </div>
+                <div className="card-body">
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label className="form-label">Pickup Address</label>
+                            <p>{delivery.pickupAddress}</p>
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Delivery Address</label>
+                            <p>{delivery.deliveryAddress}</p>
+                        </div>
+                    </div>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label className="form-label">Package Weight</label>
+                            <p>{delivery.packageWeightKg} kg</p>
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Package Volume</label>
+                            <p>{delivery.packageVolumeM3} m³</p>
+                        </div>
+                    </div>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label className="form-label">Deadline</label>
+                            <p>{new Date(delivery.deadline).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Created By</label>
+                            <p>{delivery.createdBy}</p>
+                        </div>
+                    </div>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label className="form-label">Created At</label>
+                            <p>{new Date(delivery.createdAt).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Last Updated</label>
+                            <p>{new Date(delivery.updatedAt).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
