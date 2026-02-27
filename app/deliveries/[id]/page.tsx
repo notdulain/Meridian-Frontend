@@ -81,40 +81,6 @@ export default function DeliveryDetailPage() {
 
             <div className="card" style={{ maxWidth: 720, marginBottom: 20 }}>
                 <div className="card-header">
-                    <h2>Status History</h2>
-                </div>
-                <div className="card-body">
-                    {delivery.statusHistory.length === 0 ? (
-                        <p style={{ color: "var(--color-text-muted)", fontSize: 13 }}>No status changes recorded.</p>
-                    ) : (
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>From</th>
-                                    <th>To</th>
-                                    <th>Changed By</th>
-                                    <th>Date</th>
-                                    <th>Notes</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {delivery.statusHistory.map((h) => (
-                                    <tr key={h.id}>
-                                        <td><span className={STATUS_BADGE[h.previousStatus]}>{h.previousStatus}</span></td>
-                                        <td><span className={STATUS_BADGE[h.newStatus]}>{h.newStatus}</span></td>
-                                        <td>{h.changedBy}</td>
-                                        <td>{new Date(h.changedAt).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
-                                        <td>{h.notes ?? "—"}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    )}
-                </div>
-            </div>
-
-            <div className="card" style={{ maxWidth: 720, marginBottom: 20 }}>
-                <div className="card-header">
                     <h2>Delivery Details</h2>
                 </div>
                 <div className="card-body">
@@ -176,6 +142,40 @@ export default function DeliveryDetailPage() {
                             <p>{delivery.assignedDriverId ?? <span style={{ color: "var(--color-text-muted)" }}>Not assigned</span>}</p>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div className="card" style={{ maxWidth: 720, marginBottom: 20 }}>
+                <div className="card-header">
+                    <h2>Status History</h2>
+                </div>
+                <div className="card-body">
+                    {delivery.statusHistory.length === 0 ? (
+                        <p style={{ color: "var(--color-text-muted)", fontSize: 13 }}>No status changes recorded.</p>
+                    ) : (
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>From</th>
+                                    <th>To</th>
+                                    <th>Changed By</th>
+                                    <th>Date</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {delivery.statusHistory.map((h) => (
+                                    <tr key={h.id}>
+                                        <td><span className={STATUS_BADGE[h.previousStatus]}>{h.previousStatus}</span></td>
+                                        <td><span className={STATUS_BADGE[h.newStatus]}>{h.newStatus}</span></td>
+                                        <td>{h.changedBy}</td>
+                                        <td>{new Date(h.changedAt).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
+                                        <td>{h.notes ?? "—"}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
             </div>
         </div>
