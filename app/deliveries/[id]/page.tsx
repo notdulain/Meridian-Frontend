@@ -3,7 +3,16 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { apiClient } from "@/lib/api/client";
-import type { DeliveryDto } from "@/lib/types";
+import type { DeliveryDto, DeliveryStatus } from "@/lib/types";
+
+const STATUS_BADGE: Record<DeliveryStatus, string> = {
+    Pending:   "badge badge-pending",
+    Assigned:  "badge badge-assigned",
+    InTransit: "badge badge-intransit",
+    Delivered: "badge badge-delivered",
+    Failed:    "badge badge-failed",
+    Canceled:  "badge badge-canceled",
+};
 
 export default function DeliveryDetailPage() {
     const { id } = useParams();
@@ -65,6 +74,49 @@ export default function DeliveryDetailPage() {
                 <button className="btn btn-secondary" onClick={() => router.back()}>
                     ← Back
                 </button>
+            </div>
+
+            <div className="card" style={{ maxWidth: 720, marginBottom: 20 }}>
+                <div className="card-header">
+                    <h2>Status</h2>
+                </div>
+                <div className="card-body">
+                    <span className={STATUS_BADGE[delivery.status]}>{delivery.status}</span>
+                </div>
+            </div>
+
+            <div className="card" style={{ maxWidth: 720, marginBottom: 20 }}>
+                <div className="card-header">
+                    <h2>Status History</h2>
+                </div>
+                <div className="card-body">
+                    {delivery.statusHistory.length === 0 ? (
+                        <p style={{ color: "var(--color-text-muted)", fontSize: 13 }}>No status changes recorded.</p>
+                    ) : (
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>From</th>
+                                    <th>To</th>
+                                    <th>Changed By</th>
+                                    <th>Date</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {delivery.statusHistory.map((h) => (
+                                    <tr key={h.id}>
+                                        <td><span className={STATUS_BADGE[h.previousStatus]}>{h.previousStatus}</span></td>
+                                        <td><span className={STATUS_BADGE[h.newStatus]}>{h.newStatus}</span></td>
+                                        <td>{h.changedBy}</td>
+                                        <td>{new Date(h.changedAt).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
+                                        <td>{h.notes ?? "—"}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
             </div>
 
             <div className="card" style={{ maxWidth: 720 }}>
