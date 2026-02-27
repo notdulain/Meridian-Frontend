@@ -119,7 +119,7 @@ export default function DeliveryDetailPage() {
                 </div>
             </div>
 
-            <div className="card" style={{ maxWidth: 720 }}>
+            <div className="card" style={{ maxWidth: 720, marginBottom: 20 }}>
                 <div className="card-header">
                     <h2>Delivery Details</h2>
                 </div>
@@ -162,6 +162,24 @@ export default function DeliveryDetailPage() {
                         <div className="form-group">
                             <label className="form-label">Last Updated</label>
                             <p>{new Date(delivery.updatedAt).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="card" style={{ maxWidth: 720, marginBottom: 20 }}>
+                <div className="card-header">
+                    <h2>Assignment</h2>
+                </div>
+                <div className="card-body">
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label className="form-label">Assigned Vehicle</label>
+                            <p>{delivery.assignedVehicleId ?? <span style={{ color: "var(--color-text-muted)" }}>Not assigned</span>}</p>
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Assigned Driver</label>
+                            <p>{delivery.assignedDriverId ?? <span style={{ color: "var(--color-text-muted)" }}>Not assigned</span>}</p>
                         </div>
                     </div>
                 </div>
