@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Sidebar } from "@/components/layout/Sidebar";
-import { Topbar } from "@/components/layout/Topbar";
+import { AppShell } from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
   title: "Meridian | Fleet Management",
@@ -16,13 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <div className="app-shell">
-          <Sidebar />
-          <div className="main-content">
-            <Topbar />
-            {children}
-          </div>
-        </div>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
