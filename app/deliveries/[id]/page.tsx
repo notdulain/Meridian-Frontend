@@ -37,7 +37,7 @@ export default function DeliveryDetailPage() {
         setDeleting(true);
         try {
             await apiClient.delete(`/delivery/api/deliveries/${id}`);
-            router.push("/deliveries");
+            router.push(`/deliveries?deleted=${id}`);
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : "Failed to delete delivery.");
             setDeleting(false);
