@@ -24,7 +24,7 @@ export default function DeliveryDetailPage() {
 
     useEffect(() => {
         apiClient
-            .get<DeliveryDto>(`/delivery/api/Deliveries/${id}`)
+            .get<DeliveryDto>(`/delivery/api/deliveries/${id}`)
             .then(setDelivery)
             .catch((err: unknown) =>
                 setError(err instanceof Error ? err.message : "Failed to load delivery.")
@@ -36,7 +36,7 @@ export default function DeliveryDetailPage() {
         if (!confirm(`Are you sure you want to delete delivery #${id}? This action cannot be undone.`)) return;
         setDeleting(true);
         try {
-            await apiClient.delete(`/delivery/api/Deliveries/${id}`);
+            await apiClient.delete(`/delivery/api/deliveries/${id}`);
             router.push("/deliveries");
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : "Failed to delete delivery.");
