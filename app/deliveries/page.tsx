@@ -33,7 +33,7 @@ export default function DeliveriesPage() {
         if (!confirm(`Are you sure you want to delete delivery #${id}? This action cannot be undone.`)) return;
         setDeletingId(id);
         try {
-            await apiClient.delete(`/delivery/api/Deliveries/${id}`);
+            await apiClient.delete(`/delivery/api/deliveries/${id}`);
             setDeliveries((prev) => prev.filter((d) => d.id !== id));
         } catch (err: unknown) {
             alert(err instanceof Error ? err.message : "Failed to delete delivery.");
@@ -44,7 +44,7 @@ export default function DeliveriesPage() {
 
     useEffect(() => {
         apiClient
-            .get<DeliveryDto[]>("/delivery/api/Deliveries")
+            .get<DeliveryDto[]>("/delivery/api/deliveries")
             .then(setDeliveries)
             .catch((err: unknown) =>
                 setError(err instanceof Error ? err.message : "Failed to load deliveries.")
