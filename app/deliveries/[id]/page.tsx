@@ -88,15 +88,13 @@ export default function DeliveryDetailPage() {
                     <p>Viewing delivery request details</p>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                    {delivery.status === "Canceled" && (
-                        <button
-                            className="btn btn-danger"
-                            onClick={handleDelete}
-                            disabled={deleting}
-                        >
-                            {deleting ? "Deleting…" : "Delete Delivery"}
-                        </button>
-                    )}
+                    <button
+                        className="btn btn-danger"
+                        onClick={handleDelete}
+                        disabled={deleting}
+                    >
+                        {deleting ? "Deleting…" : "Delete Delivery"}
+                    </button>
                     <button className="btn btn-secondary" onClick={() => router.back()}>
                         ← Back
                     </button>
