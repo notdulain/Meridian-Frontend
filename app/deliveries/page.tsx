@@ -184,16 +184,14 @@ export default function DeliveriesPage() {
                                             >
                                                 View
                                             </Link>
-                                            {delivery.status === "Canceled" && (
-                                                <button
-                                                    className="btn btn-danger"
-                                                    style={{ padding: "4px 10px", fontSize: 12 }}
-                                                    onClick={() => handleDelete(delivery.id)}
-                                                    disabled={deletingId === delivery.id}
-                                                >
-                                                    {deletingId === delivery.id ? "Deleting…" : "Delete"}
-                                                </button>
-                                            )}
+                                            <button
+                                                className="btn btn-danger"
+                                                style={{ padding: "4px 10px", fontSize: 12 }}
+                                                onClick={() => handleDelete(delivery.id)}
+                                                disabled={deletingId === delivery.id}
+                                            >
+                                                {deletingId === delivery.id ? "Deleting…" : "Delete"}
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
