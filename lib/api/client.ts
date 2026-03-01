@@ -4,7 +4,7 @@
  *
  * Usage:
  *   import { apiClient } from "@/lib/api/client";
- *   const delivery = await apiClient.get<DeliveryDto>("/delivery/api/Deliveries/2");
+ *   const delivery = await apiClient.get<DeliveryDto>("/delivery/api/deliveries/2");
  */
 
 const GATEWAY_BASE_URL =
