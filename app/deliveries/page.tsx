@@ -27,6 +27,20 @@ export default function DeliveriesPage() {
     const [error, setError] = useState("");
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<DeliveryStatus | "">("");
+    const [deletingId, setDeletingId] = useState<number | null>(null);
+
+    async function handleDelete(id: number) {
+        if (!confirm(`Are you sure you want to delete delivery #${id}? This action cannot be undone.`)) return;
+        setDeletingId(id);
+        try {
+            await apiClient.delete(`/delivery/api/Deliveries/${id}`);
+            setDeliveries((prev) => prev.filter((d) => d.id !== id));
+        } catch (err: unknown) {
+            alert(err instanceof Error ? err.message : "Failed to delete delivery.");
+        } finally {
+            setDeletingId(null);
+        }
+    }
 
     useEffect(() => {
         apiClient
@@ -162,13 +176,25 @@ export default function DeliveriesPage() {
                                     </td>
                                     <td>{delivery.createdBy}</td>
                                     <td>
-                                        <Link
-                                            href={`/deliveries/${delivery.id}`}
-                                            className="btn btn-secondary"
-                                            style={{ padding: "4px 10px", fontSize: 12 }}
-                                        >
-                                            View
-                                        </Link>
+                                        <div style={{ display: "flex", gap: 6 }}>
+                                            <Link
+                                                href={`/deliveries/${delivery.id}`}
+                                                className="btn btn-secondary"
+                                                style={{ padding: "4px 10px", fontSize: 12 }}
+                                            >
+                                                View
+                                            </Link>
+                                            {delivery.status === "Canceled" && (
+                                                <button
+                                                    className="btn btn-danger"
+                                                    style={{ padding: "4px 10px", fontSize: 12 }}
+                                                    onClick={() => handleDelete(delivery.id)}
+                                                    disabled={deletingId === delivery.id}
+                                                >
+                                                    {deletingId === delivery.id ? "Deleting…" : "Delete"}
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))
