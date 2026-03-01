@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/api/client";
 import type { DeliveryDto, DeliveryStatus } from "@/lib/types";
 
@@ -22,15 +23,36 @@ function formatDeadline(iso: string) {
 }
 
 export default function DeliveriesPage() {
+    const searchParams = useSearchParams();
     const [deliveries, setDeliveries] = useState<DeliveryDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<DeliveryStatus | "">("");
+    const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [deleteSuccess, setDeleteSuccess] = useState(() => {
+        const deleted = searchParams.get("deleted");
+        return deleted ? `Delivery #${deleted} was successfully deleted.` : "";
+    });
+
+    async function handleDelete(id: number) {
+        if (!confirm(`Are you sure you want to delete delivery #${id}? This action cannot be undone.`)) return;
+        setDeletingId(id);
+        try {
+            await apiClient.delete(`/delivery/api/deliveries/${id}`);
+            setDeliveries((prev) => prev.filter((d) => d.id !== id));
+            setDeleteSuccess(`Delivery #${id} was successfully deleted.`);
+            setTimeout(() => setDeleteSuccess(""), 3000);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Failed to delete delivery.");
+        } finally {
+            setDeletingId(null);
+        }
+    }
 
     useEffect(() => {
         apiClient
-            .get<DeliveryDto[]>("/delivery/api/Deliveries")
+            .get<DeliveryDto[]>("/delivery/api/deliveries")
             .then(setDeliveries)
             .catch((err: unknown) =>
                 setError(err instanceof Error ? err.message : "Failed to load deliveries.")
@@ -69,6 +91,16 @@ export default function DeliveriesPage() {
                         <path d="M8 5v3M8 10.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                     </svg>
                     {error}
+                </div>
+            )}
+
+            {deleteSuccess && (
+                <div className="alert alert-success">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+                        <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    {deleteSuccess}
                 </div>
             )}
 
@@ -162,13 +194,23 @@ export default function DeliveriesPage() {
                                     </td>
                                     <td>{delivery.createdBy}</td>
                                     <td>
-                                        <Link
-                                            href={`/deliveries/${delivery.id}`}
-                                            className="btn btn-secondary"
-                                            style={{ padding: "4px 10px", fontSize: 12 }}
-                                        >
-                                            View
-                                        </Link>
+                                        <div style={{ display: "flex", gap: 6 }}>
+                                            <Link
+                                                href={`/deliveries/${delivery.id}`}
+                                                className="btn btn-secondary"
+                                                style={{ padding: "4px 10px", fontSize: 12 }}
+                                            >
+                                                View
+                                            </Link>
+                                            <button
+                                                className="btn btn-danger"
+                                                style={{ padding: "4px 10px", fontSize: 12 }}
+                                                onClick={() => handleDelete(delivery.id)}
+                                                disabled={deletingId === delivery.id}
+                                            >
+                                                {deletingId === delivery.id ? "Deleting…" : "Delete"}
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))
