@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\athth\\OneDrive\\Desktop\\Sliit\\Projects\\Meridian\\Meridian-Frontend\\UITests\\UITests.csproj": {}
+    "/Users/realdulain/Documents/Projects/Meridian/meridian-frontend/UITests/UITests.csproj": {}
   },
   "projects": {
-    "C:\\Users\\athth\\OneDrive\\Desktop\\Sliit\\Projects\\Meridian\\Meridian-Frontend\\UITests\\UITests.csproj": {
+    "/Users/realdulain/Documents/Projects/Meridian/meridian-frontend/UITests/UITests.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\athth\\OneDrive\\Desktop\\Sliit\\Projects\\Meridian\\Meridian-Frontend\\UITests\\UITests.csproj",
+        "projectUniqueName": "/Users/realdulain/Documents/Projects/Meridian/meridian-frontend/UITests/UITests.csproj",
         "projectName": "UITests",
-        "projectPath": "C:\\Users\\athth\\OneDrive\\Desktop\\Sliit\\Projects\\Meridian\\Meridian-Frontend\\UITests\\UITests.csproj",
-        "packagesPath": "C:\\Users\\athth\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\athth\\OneDrive\\Desktop\\Sliit\\Projects\\Meridian\\Meridian-Frontend\\UITests\\obj\\",
+        "projectPath": "/Users/realdulain/Documents/Projects/Meridian/meridian-frontend/UITests/UITests.csproj",
+        "packagesPath": "/Users/realdulain/.nuget/packages/",
+        "outputPath": "/Users/realdulain/Documents/Projects/Meridian/meridian-frontend/UITests/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\athth\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/Users/realdulain/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
@@ -89,7 +89,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.103/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.103/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",

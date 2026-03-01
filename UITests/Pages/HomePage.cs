@@ -45,4 +45,16 @@ public class HomePage
     {
         return _wait.Until(d => d.FindElement(By.TagName("h1")));
     }
+
+    // ── ARTIFICIAL DELAY ────────────────────────────────────────────────────────
+    // WaitBriefly() pauses the test so a human can watch what just happened
+    // in the browser before the next test starts.
+    //
+    // To remove the artificial delay (e.g. for faster CI runs), delete every
+    // line that calls  _homePage.WaitBriefly(...)  in HomePageTests.cs.
+    // Do NOT delete this method itself — just the call sites.
+    public void WaitBriefly(int milliseconds = 1500)
+    {
+        Thread.Sleep(milliseconds);
+    }
 }

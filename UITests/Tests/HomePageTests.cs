@@ -12,10 +12,10 @@ public class HomePageTests : BaseTest
 {
     private HomePage _homePage = null!;
 
-    [SetUp]
-    public new void SetUp()
+    [OneTimeSetUp]
+    public void SetupHomePage()
     {
-        base.SetUp();
+        // NUnit automatically runs BaseTest.OneTimeSetUp() first, so Driver is already initialized.
         _homePage = new HomePage(Driver);
         _homePage.GoTo(BaseUrl);
     }
@@ -27,6 +27,8 @@ public class HomePageTests : BaseTest
         // The page URL should be the base URL
         Assert.That(Driver.Url, Does.Contain("localhost:3000"),
             "Page URL should contain localhost:3000");
+
+        _homePage.WaitBriefly(1000); // 1 second pause to watch
     }
 
     [Test]
@@ -39,6 +41,8 @@ public class HomePageTests : BaseTest
             "Page title should not be empty");
 
         Console.WriteLine($"Page title: {title}");
+        
+        _homePage.WaitBriefly(1000); // 1 second pause to watch
     }
 
     [Test]
@@ -51,6 +55,8 @@ public class HomePageTests : BaseTest
         Assert.That(heading.Displayed, Is.True, "H1 heading should be visible");
 
         Console.WriteLine($"Heading text: {heading.Text}");
+        
+        _homePage.WaitBriefly(1000); // 1 second pause to watch
     }
 
     [Test]
@@ -63,6 +69,8 @@ public class HomePageTests : BaseTest
             "Dashboard should display at least one stat card");
 
         Console.WriteLine($"Found {cards.Count} stat card(s) on the dashboard");
+        
+        _homePage.WaitBriefly(1000); // 1 second pause to watch
     }
 
     [Test]
@@ -73,5 +81,7 @@ public class HomePageTests : BaseTest
 
         Assert.That(table, Is.Not.Null, "Dashboard should have a deliveries table");
         Assert.That(table.Displayed, Is.True, "Deliveries table should be visible");
+        
+        _homePage.WaitBriefly(2000); // Final 2 second pause before closing
     }
 }
