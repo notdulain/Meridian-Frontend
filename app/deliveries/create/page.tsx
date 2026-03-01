@@ -88,7 +88,7 @@ export default function CreateDeliveryPage() {
                 deadline: new Date(form.deadline).toISOString(),
             };
 
-            const created = await apiClient.post<DeliveryDto>("/delivery/api/Deliveries", payload);
+            const created = await apiClient.post<DeliveryDto>("/delivery/api/deliveries", payload);
             setSuccess(created);
 
             // Redirect to deliveries list after a short delay so user sees confirmation
