@@ -20,6 +20,7 @@ export default function DeliveryDetailPage() {
     const [delivery, setDelivery] = useState<DeliveryDto | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [deleting, setDeleting] = useState(false);
 
     useEffect(() => {
         apiClient
@@ -30,6 +31,18 @@ export default function DeliveryDetailPage() {
             )
             .finally(() => setLoading(false));
     }, [id]);
+
+    async function handleDelete() {
+        if (!confirm(`Are you sure you want to delete delivery #${id}? This action cannot be undone.`)) return;
+        setDeleting(true);
+        try {
+            await apiClient.delete(`/delivery/api/Deliveries/${id}`);
+            router.push("/deliveries");
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Failed to delete delivery.");
+            setDeleting(false);
+        }
+    }
 
     if (loading) {
         return (
@@ -74,9 +87,20 @@ export default function DeliveryDetailPage() {
                     </div>
                     <p>Viewing delivery request details</p>
                 </div>
-                <button className="btn btn-secondary" onClick={() => router.back()}>
-                    ← Back
-                </button>
+                <div style={{ display: "flex", gap: 8 }}>
+                    {delivery.status === "Canceled" && (
+                        <button
+                            className="btn btn-danger"
+                            onClick={handleDelete}
+                            disabled={deleting}
+                        >
+                            {deleting ? "Deleting…" : "Delete Delivery"}
+                        </button>
+                    )}
+                    <button className="btn btn-secondary" onClick={() => router.back()}>
+                        ← Back
+                    </button>
+                </div>
             </div>
 
             <div className="card" style={{ maxWidth: 720, marginBottom: 20 }}>
