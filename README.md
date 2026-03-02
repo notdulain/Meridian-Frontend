@@ -1,8 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Meridian Frontend
+
+Meridian is a comprehensive logistics and delivery management platform. The `meridian-frontend` application serves as the primary user interface to interact with the Meridian microservices ecosystem, allowing administrators and operators to monitor deliveries, manage vehicles and drivers, track routes, and handle assignments in real-time.
+
+This project is built with [Next.js](https://nextjs.org/) and interacts with the various backend microservices through the API Gateway.
+
+## Features
+
+- **Dashboard**: High-level overview of system metrics and active operations.
+- **Delivery Management**: View, create, and manage deliveries.
+- **Driver Management**: Manage driver profiles, availability, and assignments.
+- **Vehicle Management**: Track vehicle status, maintenance, and allocation.
+- **Route Tracking**: Real-time tracking of active routes and deliveries.
+- **Assignment Service**: Efficiently assign drivers and vehicles to deliveries.
+
+## Screenshots
+
+### Dashboard Overview
+![Dashboard Overview Placeholder](./docs/screenshots/dashboard_placeholder.png)
+*A high-level view of active deliveries, available drivers, and vehicle statuses.*
+
+### Real-Time Route Tracking
+![Route Tracking Placeholder](./docs/screenshots/tracking_placeholder.png)
+*Live tracking interface showing active delivery routes on the map.*
+
+### Delivery Management
+![Delivery Management Placeholder](./docs/screenshots/delivery_placeholder.png)
+*Interface for creating and managing delivery details and statuses.*
+
+*(Note: Add actual screenshots to the `docs/screenshots` directory as the UI is finalized.)*
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js (v18 or newer recommended)
+- npm, yarn, pnpm, or bun
+
+Ensure the Meridian Backend microservices and the API Gateway are running locally or accessible via your environment configuration.
+
+### Installation
+
+Clone the repository and install the dependencies:
+
+```bash
+cd meridian-frontend
+npm install
+# or
+yarn install
+```
+
+### Development Server
+
+Run the development server:
 
 ```bash
 npm run dev
@@ -14,23 +63,15 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `app/`: Next.js App Router containing pages and layouts.
+- `components/`: Reusable UI components.
+- `lib/` or `utils/`: Utility functions and API client configurations.
+- `types/`: TypeScript definitions for the domain models (e.g., Deliveries, Drivers, Vehicles).
 
-## Learn More
+## Backend Integration
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This frontend communicates directly with the Meridian backend through the **API Gateway**. Ensure your `.env.local` contains the correct API Gateway URL (typically `http://localhost:5050` for local development) to ensure seamless data fetching.
