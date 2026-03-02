@@ -16,18 +16,16 @@ This project is built with [Next.js](https://nextjs.org/) and interacts with the
 ## Screenshots
 
 ### Dashboard Overview
-![Dashboard Overview Placeholder](./docs/screenshots/dashboard_placeholder.png)
+![Dashboard Overview Placeholder](./docs/screenshots/dashboard.png)
 *A high-level view of active deliveries, available drivers, and vehicle statuses.*
 
 ### Real-Time Route Tracking
-![Route Tracking Placeholder](./docs/screenshots/tracking_placeholder.png)
+![Route Tracking Placeholder](./docs/screenshots/routes.png)
 *Live tracking interface showing active delivery routes on the map.*
 
 ### Delivery Management
-![Delivery Management Placeholder](./docs/screenshots/delivery_placeholder.png)
+![Delivery Management Placeholder](./docs/screenshots/deliveries.png)
 *Interface for creating and managing delivery details and statuses.*
-
-*(Note: Add actual screenshots to the `docs/screenshots` directory as the UI is finalized.)*
 
 ## Getting Started
 
