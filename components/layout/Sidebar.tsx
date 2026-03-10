@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
 
 const navSections = [
     {
@@ -81,6 +82,21 @@ const navSections = [
 
 export function Sidebar() {
     const pathname = usePathname();
+    const { role } = useAuthStore();
+
+    const roleSpecificSections = navSections.map(section => {
+        if (role === "Admin" || role === "Dispatcher") return section;
+        if (role === "Driver" && section.label === "Operations") {
+            return {
+                label: "Operations",
+                items: section.items.filter(i => i.href === "/" || i.href === "/deliveries")
+            };
+        }
+        return section;
+    }).filter(section => {
+        if (role === "Driver" && section.label === "Fleet") return false;
+        return true;
+    });
 
     return (
         <aside className="sidebar">
@@ -89,7 +105,7 @@ export function Sidebar() {
                 <span className="sidebar-logo-text">Meridian</span>
             </div>
 
-            {navSections.map((section) => (
+            {roleSpecificSections.map((section) => (
                 <div key={section.label} className="sidebar-section">
                     <p className="sidebar-section-label">{section.label}</p>
                     {section.items.map((item) => (
@@ -97,9 +113,9 @@ export function Sidebar() {
                             key={item.href}
                             href={item.href}
                             className={`sidebar-nav-item ${pathname === item.href ||
-                                    (item.href !== "/" && pathname.startsWith(item.href))
-                                    ? "active"
-                                    : ""
+                                (item.href !== "/" && pathname.startsWith(item.href))
+                                ? "active"
+                                : ""
                                 }`}
                         >
                             {item.icon}

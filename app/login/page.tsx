@@ -1,17 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { LoginRequest, AuthResponse } from "@/lib/types";
-
-const AUTH_BASE_URL =
-    process.env.NEXT_PUBLIC_AUTH_URL ?? "http://localhost:6007";
+import { authService } from "@/services/authService";
+import { useAuthStore } from "@/store/authStore";
 
 export default function LoginPage() {
     const router = useRouter();
+    const { login, isHydrated, token } = useAuthStore();
     const [form, setForm] = useState<LoginRequest>({ email: "", password: "" });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+
+    useEffect(() => {
+        if (isHydrated && token) {
+            router.push("/");
+        }
+    }, [isHydrated, token, router]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -27,26 +33,26 @@ export default function LoginPage() {
         setLoading(true);
         setError("");
         try {
-            const res = await fetch(`${AUTH_BASE_URL}/api/auth/login`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(form),
-            });
+            const data = await authService.login(form);
 
-            if (res.status === 401) {
+            // Decode role manually if backend doesn't send it, otherwise use provided role
+            // Since this is a mock frontend for the system, we can extract role or decode JWT
+            // Assuming `role` comes as part of `data`
+            const userRole = data.role || (form.email.includes("admin") ? "Admin" : form.email.includes("driver") ? "Driver" : "Dispatcher");
+
+            login(data.accessToken, userRole, { id: 1, email: form.email });
+
+            if (userRole === "Admin") router.push("/admin/dashboard");
+            else if (userRole === "Dispatcher") router.push("/dispatcher/dashboard");
+            else if (userRole === "Driver") router.push("/driver/dashboard");
+            else router.push("/");
+
+        } catch (err: any) {
+            if (err.response?.status === 401) {
                 setError("Invalid email or password.");
-                return;
+            } else {
+                setError("Unable to reach the auth service. Please try again.");
             }
-            if (!res.ok) {
-                setError("Login failed. Please try again.");
-                return;
-            }
-
-            const data: AuthResponse = await res.json();
-            localStorage.setItem("meridian_token", data.accessToken);
-            router.push("/");
-        } catch {
-            setError("Unable to reach the auth service. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -58,7 +64,7 @@ export default function LoginPage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "var(--color-bg)",
+            background: "var(--color-bg-gradient)",
         }}>
             <div style={{ width: "100%", maxWidth: 400, padding: "0 16px" }}>
                 <div style={{ textAlign: "center", marginBottom: 32 }}>

@@ -1,5 +1,4 @@
-"use client";
-
+import { useAuthStore } from "@/store/authStore";
 import { usePathname, useRouter } from "next/navigation";
 
 const breadcrumbMap: Record<string, string[]> = {
