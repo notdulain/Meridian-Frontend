@@ -119,6 +119,8 @@ export interface LoginRequest {
     password: string;
 }
 
+export type AuthRole = "Company" | "Admin" | "Dispatcher";
+
 export interface AuthResponse {
     accessToken: string;
     refreshToken: string;

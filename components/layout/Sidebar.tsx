@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useAuthStore } from "@/store/authStore";
 
 const navSections = [
     {
         label: "Operations",
         items: [
             {
-                href: "/",
+                href: "/dashboard/dispatcher",
                 label: "Dashboard",
                 icon: (
                     <svg viewBox="0 0 16 16" fill="currentColor" className="nav-icon">
@@ -82,30 +82,23 @@ const navSections = [
 
 export function Sidebar() {
     const pathname = usePathname();
-    const { role } = useAuthStore();
-
-    const roleSpecificSections = navSections.map(section => {
-        if (role === "Admin" || role === "Dispatcher") return section;
-        if (role === "Driver" && section.label === "Operations") {
-            return {
-                label: "Operations",
-                items: section.items.filter(i => i.href === "/" || i.href === "/deliveries")
-            };
-        }
-        return section;
-    }).filter(section => {
-        if (role === "Driver" && section.label === "Fleet") return false;
-        return true;
-    });
 
     return (
         <aside className="sidebar">
             <div className="sidebar-logo">
-                <div className="sidebar-logo-mark">M</div>
+                <div className="sidebar-logo-mark">
+                    <Image
+                        src="/meridian-logo.png"
+                        alt="Meridian logo"
+                        width={28}
+                        height={28}
+                        style={{ objectFit: "cover", borderRadius: 6 }}
+                    />
+                </div>
                 <span className="sidebar-logo-text">Meridian</span>
             </div>
 
-            {roleSpecificSections.map((section) => (
+            {navSections.map((section) => (
                 <div key={section.label} className="sidebar-section">
                     <p className="sidebar-section-label">{section.label}</p>
                     {section.items.map((item) => (

@@ -3,9 +3,8 @@
 import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
-import { AuthGuard } from "@/components/AuthGuard";
 
-const NO_SHELL_ROUTES = ["/login"];
+const NO_SHELL_ROUTES: string[] = [];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -16,14 +15,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
 
     return (
-        <AuthGuard>
-            <div className="app-shell">
-                <Sidebar />
-                <div className="main-content">
-                    <Topbar />
-                    {children}
-                </div>
+        <div className="app-shell">
+            <Sidebar />
+            <div className="main-content">
+                <Topbar />
+                {children}
             </div>
-        </AuthGuard>
+        </div>
     );
 }
