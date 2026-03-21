@@ -4,7 +4,6 @@ export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
   expiresIn?: number;
-  role?: AuthRole;
 }
 
 export interface LoginRequestDto {
@@ -13,7 +12,7 @@ export interface LoginRequestDto {
 }
 
 export interface RegisterRequestDto {
-  username: string;
+  fullName: string;
   email: string;
   password: string;
   role: AuthRole;
@@ -25,7 +24,7 @@ export interface RefreshTokenRequestDto {
 
 export interface UserDto {
   id: string;
-  username?: string;
+  fullName?: string;
   email: string;
   role?: AuthRole;
   isActive?: boolean;
@@ -90,6 +89,7 @@ export interface DeliveryListQuery {
   orderNumber?: string;
   page?: number;
   pageSize?: number;
+  [key: string]: string | number | boolean | null | undefined;
 }
 
 export interface VehicleListQuery {
@@ -97,11 +97,13 @@ export interface VehicleListQuery {
   pageSize?: number;
   status?: string;
   isActive?: boolean;
+  [key: string]: string | number | boolean | null | undefined;
 }
 
 export interface DriverListQuery {
   page?: number;
   pageSize?: number;
+  [key: string]: string | number | boolean | null | undefined;
 }
 
 export interface AssignmentHistoryQuery {
@@ -109,9 +111,11 @@ export interface AssignmentHistoryQuery {
   toDate?: string;
   page?: number;
   pageSize?: number;
+  [key: string]: string | number | boolean | null | undefined;
 }
 
 export interface RouteQuery {
   origin: string;
   destination: string;
+  [key: string]: string | number | boolean | null | undefined;
 }

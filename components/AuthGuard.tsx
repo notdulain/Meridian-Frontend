@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 
@@ -8,7 +8,13 @@ export function AuthGuard({ children, allowedRoles }: { children: React.ReactNod
     const router = useRouter();
     const pathname = usePathname();
     const { token, role, isHydrated, setHydrated } = useAuthStore();
-    const [authorized, setAuthorized] = useState(false);
+
+    const getRoleHome = (userRole: string | null): string => {
+        if (userRole === "Admin") return "/admin/dashboard";
+        if (userRole === "Dispatcher") return "/dashboard/dispatcher";
+        if (userRole === "Driver") return "/driver/dashboard";
+        return "/dashboard/dispatcher";
+    };
 
     useEffect(() => {
         setHydrated();
@@ -18,22 +24,17 @@ export function AuthGuard({ children, allowedRoles }: { children: React.ReactNod
         if (!isHydrated) return;
 
         if (!token) {
-            router.push("/login");
+            router.replace("/login");
             return;
         }
 
-        if (allowedRoles && role && !allowedRoles.includes(role)) {
-            if (role === "Admin") router.push("/admin/dashboard");
-            else if (role === "Dispatcher") router.push("/dispatcher/dashboard");
-            else if (role === "Driver") router.push("/driver/dashboard");
-            else router.push("/");
+        if (allowedRoles && (!role || !allowedRoles.includes(role))) {
+            router.replace(getRoleHome(role));
             return;
         }
-
-        setAuthorized(true);
     }, [isHydrated, token, role, allowedRoles, router, pathname]);
 
-    if (!isHydrated || !authorized) {
+    if (!isHydrated || !token || (allowedRoles && (!role || !allowedRoles.includes(role)))) {
         return (
             <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--color-bg-gradient)", color: "white" }}>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>

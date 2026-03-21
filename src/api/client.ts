@@ -15,4 +15,23 @@ const apiClient = axios.create({
   },
 });
 
+const AUTH_BYPASS_PATHS = [
+  "/api/auth/login",
+  "/api/auth/register",
+  "/api/auth/refresh",
+  "/api/auth/revoke",
+  "/api/auth/logout",
+];
+
+apiClient.interceptors.request.use((config) => {
+  if (typeof window === "undefined") return config;
+  const url = config.url || "";
+  const isAuthCall = AUTH_BYPASS_PATHS.some((path) => url.startsWith(path));
+  const token = localStorage.getItem("meridian_token");
+  if (token && !isAuthCall) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 export default apiClient;

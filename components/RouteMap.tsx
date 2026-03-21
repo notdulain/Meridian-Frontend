@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import "leaflet/dist/leaflet.css";
 
@@ -8,7 +7,6 @@ import "leaflet/dist/leaflet.css";
 const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false });
 const Polyline = dynamic(() => import("react-leaflet").then((mod) => mod.Polyline), { ssr: false });
-const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), { ssr: false });
 
 // Sri Lanka Coordinates
 const defaultCenter: [number, number] = [6.9271, 79.8612];
@@ -23,20 +21,6 @@ interface RouteMapProps {
 }
 
 export function RouteMap({ mapRoutes, selectedRouteId }: RouteMapProps) {
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    if (!mounted) {
-        return (
-            <div className="card" style={{ height: "400px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                Loading map...
-            </div>
-        );
-    }
-
     return (
         <div className="card" style={{ overflow: "hidden" }}>
             <MapContainer

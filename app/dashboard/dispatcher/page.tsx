@@ -1,5 +1,10 @@
-import DispatcherWorkflowDashboard from "@/src/pages/dispatcher/Dashboard";
+import { AuthGuard } from "@/components/AuthGuard";
+import DispatcherWorkflowDashboard from "@/src/features/dispatcher/Dashboard";
 
 export default function DispatcherDashboardPage() {
-  return <DispatcherWorkflowDashboard />;
+  return (
+    <AuthGuard allowedRoles={["Dispatcher"]}>
+      <DispatcherWorkflowDashboard />
+    </AuthGuard>
+  );
 }

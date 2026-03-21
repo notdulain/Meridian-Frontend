@@ -1,8 +1,6 @@
 // Vehicles list page
 // TODO: Fetch from GET http://localhost:5050/vehicle/api/Vehicles
 
-import Link from "next/link";
-
 export default function VehiclesPage() {
     return (
         <div className="page-container">

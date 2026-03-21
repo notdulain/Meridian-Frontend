@@ -119,11 +119,17 @@ export interface LoginRequest {
     password: string;
 }
 
-export type AuthRole = "Company" | "Admin" | "Dispatcher";
+export interface RegisterRequest {
+    fullName: string;
+    email: string;
+    password: string;
+    role: AuthRole;
+}
+
+export type AuthRole = "Driver" | "Dispatcher" | "Admin";
 
 export interface AuthResponse {
     accessToken: string;
     refreshToken: string;
     expiresIn: number;
-    role?: string;
 }

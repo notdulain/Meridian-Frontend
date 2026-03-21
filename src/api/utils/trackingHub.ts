@@ -9,17 +9,21 @@ export interface TrackingHubConnection {
 }
 
 interface SignalRModule {
-  HubConnectionBuilder: new () => {
-    withUrl: (url: string) => unknown;
-    withAutomaticReconnect: () => unknown;
-    build: () => {
-      start: () => Promise<void>;
-      stop: () => Promise<void>;
-      on: (event: string, handler: (...args: unknown[]) => void) => void;
-      off: (event: string) => void;
-      invoke: (method: string, ...args: unknown[]) => Promise<unknown>;
-    };
-  };
+  HubConnectionBuilder: new () => SignalRConnectionBuilder;
+}
+
+interface SignalRConnection {
+  start: () => Promise<void>;
+  stop: () => Promise<void>;
+  on: (event: string, handler: (...args: unknown[]) => void) => void;
+  off: (event: string) => void;
+  invoke: (method: string, ...args: unknown[]) => Promise<unknown>;
+}
+
+interface SignalRConnectionBuilder {
+  withUrl: (url: string) => SignalRConnectionBuilder;
+  withAutomaticReconnect: () => SignalRConnectionBuilder;
+  build: () => SignalRConnection;
 }
 
 function toAbsoluteUrl(path: string): string {
