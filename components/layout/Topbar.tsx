@@ -13,6 +13,7 @@ const breadcrumbMap: Record<string, string[]> = {
     "/vehicles": ["Fleet", "Vehicles"],
     "/drivers": ["Fleet", "Drivers"],
     "/settings": ["Settings"],
+    "/profile": ["Profile"],
 };
 
 function getBreadcrumb(pathname: string): string[] {
@@ -28,10 +29,12 @@ function getBreadcrumb(pathname: string): string[] {
 export function Topbar() {
     const pathname = usePathname();
     const router = useRouter();
-    const { role, logout } = useAuthStore();
+    const { role, user, logout } = useAuthStore();
     const crumbs = getBreadcrumb(pathname);
 
-    const initials = role ? role.slice(0, 2).toUpperCase() : "US";
+    const initials = user?.name
+        ? user.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()
+        : role ? role.slice(0, 2).toUpperCase() : "US";
 
     const handleLogout = () => {
         logout();
@@ -64,9 +67,20 @@ export function Topbar() {
 
                 <div className="topbar-divider" />
 
-                <div className="user-avatar" title={role || "User"}>
+                <button
+                    type="button"
+                    className="user-avatar"
+                    title={user?.name || role || "User"}
+                    onClick={() => router.push("/profile")}
+                    style={{
+                        backgroundImage: user?.avatarUrl ? `url(${user.avatarUrl})` : undefined,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        color: user?.avatarUrl ? "transparent" : undefined,
+                    }}
+                >
                     {initials}
-                </div>
+                </button>
 
                 <div className="topbar-divider" />
 

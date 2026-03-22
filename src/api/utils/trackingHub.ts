@@ -1,4 +1,5 @@
 import { parseEndpoint } from "@/src/api/utils/endpoint";
+import { getStoredAccessToken } from "@/src/lib/auth/session";
 
 export interface TrackingHubConnection {
   start: () => Promise<void>;
@@ -21,7 +22,7 @@ interface SignalRConnection {
 }
 
 interface SignalRConnectionBuilder {
-  withUrl: (url: string) => SignalRConnectionBuilder;
+  withUrl: (url: string, options?: { accessTokenFactory?: () => string }) => SignalRConnectionBuilder;
   withAutomaticReconnect: () => SignalRConnectionBuilder;
   build: () => SignalRConnection;
 }
@@ -118,7 +119,9 @@ export async function createTrackingHubConnection(endpointDefinition: string): P
 
   if (signalR?.HubConnectionBuilder) {
     const signalRConnection = new signalR.HubConnectionBuilder()
-      .withUrl(hubUrl.replace(/^ws/, "http"))
+      .withUrl(hubUrl.replace(/^ws/, "http"), {
+        accessTokenFactory: () => getStoredAccessToken() || "",
+      })
       .withAutomaticReconnect()
       .build();
 

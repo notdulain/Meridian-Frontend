@@ -9,6 +9,14 @@ interface RequestArgs<TBody> {
   data?: TBody;
 }
 
+function unwrapEnvelope<TResponse>(payload: unknown): TResponse {
+  if (payload && typeof payload === "object" && "data" in payload) {
+    return (payload as { data: TResponse }).data;
+  }
+
+  return payload as TResponse;
+}
+
 export async function apiRequest<TResponse, TBody = unknown>(
   endpointDefinition: string,
   args: RequestArgs<TBody> = {},
@@ -31,7 +39,7 @@ export async function apiRequest<TResponse, TBody = unknown>(
       url,
       data: args.data,
     });
-    return data;
+    return unwrapEnvelope<TResponse>(data);
   } catch (error) {
     throw normalizeApiError(error);
   }
