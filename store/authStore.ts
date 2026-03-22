@@ -4,6 +4,7 @@ interface User {
     id: number;
     email: string;
     name?: string;
+    avatarUrl?: string;
 }
 
 interface AuthState {
@@ -13,6 +14,7 @@ interface AuthState {
     isHydrated: boolean;
     setHydrated: () => void;
     login: (token: string, role: string, user?: User) => void;
+    updateUser: (updates: Partial<User>) => void;
     logout: () => void;
 }
 
@@ -28,6 +30,13 @@ export const useAuthStore = create<AuthState>((set) => ({
         if (user) localStorage.setItem('meridian_user', JSON.stringify(user));
         set({ token, role, user: user || null });
     },
+    updateUser: (updates) => set((state) => {
+        const nextUser = state.user ? { ...state.user, ...updates } : null;
+        if (nextUser) {
+            localStorage.setItem('meridian_user', JSON.stringify(nextUser));
+        }
+        return { user: nextUser };
+    }),
     logout: () => {
         localStorage.removeItem('meridian_token');
         localStorage.removeItem('meridian_role');

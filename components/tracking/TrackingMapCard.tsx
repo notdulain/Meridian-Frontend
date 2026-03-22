@@ -1,11 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { Activity, Radio } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Activity, MapPinned, Radio } from "lucide-react";
 import { LiveTrackingMap } from "@/components/LiveTrackingMap";
+import { PREFERENCE_KEYS, getBooleanPreference } from "@/src/lib/preferences";
 
 export function TrackingMapCard() {
   const [vehicleCount, setVehicleCount] = useState(0);
+  const [mapEnabled, setMapEnabled] = useState(true);
+
+  useEffect(() => {
+    setMapEnabled(getBooleanPreference(PREFERENCE_KEYS.liveTrackingMapEnabled, true));
+  }, []);
 
   return (
     <section className="lg:col-span-2">
@@ -30,9 +36,21 @@ export function TrackingMapCard() {
           </div>
         </div>
 
-        <div className="relative h-[520px]">
-          <LiveTrackingMap onVehicleCountChange={setVehicleCount} />
-        </div>
+        {mapEnabled ? (
+          <div className="relative h-[520px]">
+            <LiveTrackingMap onVehicleCountChange={setVehicleCount} />
+          </div>
+        ) : (
+          <div className="flex h-[520px] items-center justify-center bg-slate-950/40 px-6 text-center">
+            <div>
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-slate-700 bg-slate-900/70">
+                <MapPinned className="h-6 w-6 text-slate-300" />
+              </div>
+              <h3 className="mt-4 text-lg font-medium text-white">Map view is turned off</h3>
+              <p className="mt-2 text-sm text-slate-400">Enable Live Tracking Map in Settings to view it here.</p>
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-3 border-t border-slate-700 bg-slate-900/80 px-5 py-5 text-sm text-slate-300 lg:px-6">
           <span className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-950/80 px-3 py-1.5 text-slate-200">
