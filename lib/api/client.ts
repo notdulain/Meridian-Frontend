@@ -1,6 +1,8 @@
+import { getStoredAccessToken } from "@/src/lib/auth/session";
+
 /**
  * Meridian API Client
- * Typed fetch wrapper — all calls go through the Ocelot API Gateway on port 5050.
+ * Typed fetch wrapper - all calls go through the Ocelot API Gateway on port 5050.
  *
  * Usage:
  *   import { apiClient } from "@/lib/api/client";
@@ -25,15 +27,15 @@ async function request<T>(
     path: string,
     options: RequestInit = {}
 ): Promise<T> {
-    // Retrieve token from storage — replace with auth context in production
-    const token =
-        typeof window !== "undefined" ? localStorage.getItem("meridian_token") : null;
+    const token = getStoredAccessToken();
 
     const headers: HeadersInit = {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...((options.headers as Record<string, string>) ?? {}),
     };
+
+    console.info("[fetch:request]", options.method ?? "GET", `${GATEWAY_BASE_URL}${path}`);
 
     const res = await fetch(`${GATEWAY_BASE_URL}${path}`, {
         ...options,
@@ -42,10 +44,12 @@ async function request<T>(
 
     if (!res.ok) {
         const body = await res.text();
+        console.warn("[fetch:error]", res.status, path, body);
         throw new ApiError(res.status, res.statusText, body);
     }
 
-    // 204 No Content
+    console.info("[fetch:response]", res.status, path);
+
     if (res.status === 204) return undefined as T;
 
     return res.json() as Promise<T>;
