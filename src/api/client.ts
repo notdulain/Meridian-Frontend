@@ -1,12 +1,12 @@
 import axios from "axios";
 import { getStoredAccessToken } from "@/src/lib/auth/session";
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL;
+const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 if (!baseURL) {
   // Keep runtime explicit so missing env is caught early in non-local environments.
   // Local fallback keeps developer experience smooth.
-  console.warn("NEXT_PUBLIC_API_URL is not set. Falling back to http://localhost:5050");
+  console.warn("NEXT_PUBLIC_API_BASE_URL is not set. Falling back to http://localhost:5050");
 }
 
 const apiClient = axios.create({

@@ -18,7 +18,7 @@ export interface TrackingConnection {
 }
 
 function getTrackingHubUrl(): string {
-  const base = process.env.NEXT_PUBLIC_TRACKING_HUB_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5050";
   const normalizedBase = base.endsWith("/") ? base.slice(0, -1) : base;
 
   if (normalizedBase.endsWith("/hubs/tracking") || normalizedBase.endsWith("/trackingHub")) {

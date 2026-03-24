@@ -30,7 +30,7 @@ interface SignalRConnectionBuilder {
 function toAbsoluteUrl(path: string): string {
   if (/^wss?:\/\//i.test(path) || /^https?:\/\//i.test(path)) return path;
 
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5050";
   const normalizedBase = base.endsWith("/") ? base.slice(0, -1) : base;
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 

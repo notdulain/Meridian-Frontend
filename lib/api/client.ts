@@ -10,7 +10,7 @@ import { getStoredAccessToken } from "@/src/lib/auth/session";
  */
 
 const GATEWAY_BASE_URL =
-    process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:5050";
+    process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5050";
 
 class ApiError extends Error {
     constructor(
