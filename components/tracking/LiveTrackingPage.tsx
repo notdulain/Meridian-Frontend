@@ -36,7 +36,7 @@ export function LiveTrackingPage() {
           : null;
 
         setSelectedDeliveryId(matchedDelivery ? String(matchedDelivery.id) : String(nextDeliveries[0]?.id ?? ""));
-      } catch (error) {
+      } catch {
         console.warn("Failed to load deliveries for tracking");
         if (!isMounted) return;
 
@@ -67,28 +67,38 @@ export function LiveTrackingPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
-      <div className="page-container max-w-[1440px] space-y-8 py-8">
-        <header className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 shadow-lg shadow-black/20 backdrop-blur-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-400">Operations</p>
-          <h1 className="mt-3 text-xl font-semibold text-white">Live Tracking</h1>
-          <p className="mt-2 text-sm text-slate-400">
-            Real-time fleet visibility and smart recommendations
-          </p>
+    <div className="h-screen max-h-screen overflow-hidden bg-slate-950 font-sans text-slate-400 selection:bg-cyan-500/30 selection:text-white flex flex-col">
+      <main className="mx-auto flex w-full max-w-[1600px] flex-1 min-h-0 flex-col px-6 pt-10 pb-6 lg:px-12">
+        <header className="shrink-0 mb-6">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-slate-500 uppercase tracking-widest">Operations / Live Tracking</span>
+            <h1 className="text-3xl font-semibold text-white tracking-tight">Active Deployments</h1>
+            <p className="text-sm text-slate-400">
+              Correlating real-time telemetry with predictive dispatch algorithms.
+            </p>
+          </div>
         </header>
 
-        {deliveryError ? <AlertBanner message={deliveryError} onDismiss={() => setDeliveryError(null)} /> : null}
+        {deliveryError ? (
+          <div className="mb-6 shrink-0 w-full">
+            <AlertBanner message={deliveryError} onDismiss={() => setDeliveryError(null)} />
+          </div>
+        ) : null}
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          <TrackingMapCard />
-          <RecommendationPanel
-            deliveryId={selectedDeliveryId}
-            deliveryOptions={deliveryOptions}
-            deliveryLoading={deliveryLoading}
-            onDeliveryChange={setSelectedDeliveryId}
-          />
+        <div className="grid flex-1 min-h-0 grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 h-full min-h-0">
+            <TrackingMapCard />
+          </div>
+          <div className="lg:col-span-1 h-full min-h-0">
+            <RecommendationPanel
+              deliveryId={selectedDeliveryId}
+              deliveryOptions={deliveryOptions}
+              deliveryLoading={deliveryLoading}
+              onDeliveryChange={setSelectedDeliveryId}
+            />
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

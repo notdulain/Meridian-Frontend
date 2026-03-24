@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, X } from "lucide-react";
+import { X } from "lucide-react";
 
 interface AlertBannerProps {
   message: string;
@@ -9,13 +9,12 @@ interface AlertBannerProps {
 
 export function AlertBanner({ message, onDismiss }: AlertBannerProps) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-200 shadow-lg shadow-black/20 backdrop-blur-sm">
-      <AlertTriangle className="mt-0.5 h-4 w-4 flex-none text-yellow-300" />
-      <p className="flex-1">{message}</p>
+    <div className="flex items-center justify-between rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-200">
+      <p>{message}</p>
       <button
         type="button"
         onClick={onDismiss}
-        className="rounded-lg p-1 text-yellow-200/80 transition-all duration-200 hover:bg-yellow-500/10 hover:text-yellow-100"
+        className="text-amber-300/60 transition-colors hover:text-amber-300"
         aria-label="Dismiss alert"
       >
         <X className="h-4 w-4" />
