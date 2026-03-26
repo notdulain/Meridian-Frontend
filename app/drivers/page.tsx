@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import apiClient from "@/src/api/client";
+import { driverService } from "@/src/api/services/driverService";
 
 interface DriverRecord {
   driverId: number;
@@ -69,10 +70,8 @@ export default function DriversPage() {
     setReportError("");
 
     try {
-      const response = await apiClient.get<{ data?: DriverPerformanceRecord[] }>("/driver/api/reports/driver-performance", {
-        params: query,
-      });
-      setReportRows(Array.isArray(response.data?.data) ? response.data.data : []);
+      const rows = await driverService.performanceReport(query);
+      setReportRows(Array.isArray(rows) ? (rows as DriverPerformanceRecord[]) : []);
     } catch (loadError) {
       console.warn("Failed to load driver performance report");
       setReportError("Unable to load driver performance report.");
