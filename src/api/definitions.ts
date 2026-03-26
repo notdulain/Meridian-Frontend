@@ -51,6 +51,10 @@ export const API = {
     available: "GET /driver/api/drivers/available",
   },
 
+  reports: {
+    driverPerformance: "GET /driver/api/reports/driver-performance?startDateUtc&endDateUtc",
+  },
+
   assignments: {
     create: "POST /assignment/api/assignments",
     list: "GET /assignment/api/assignments?page&pageSize",

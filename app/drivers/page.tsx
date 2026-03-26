@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import apiClient from "@/src/api/client";
+import { driverService } from "@/src/api/services/driverService";
 
 interface DriverRecord {
   driverId: number;
@@ -13,6 +14,13 @@ interface DriverRecord {
   maxWorkingHoursPerDay: number;
   currentWorkingHoursToday: number;
   isActive: boolean;
+}
+
+interface DriverPerformanceRecord {
+  driverId: number;
+  deliveriesCompleted: number;
+  averageDeliveryTimeMinutes: number;
+  onTimeRatePercent: number;
 }
 
 const INITIAL_FORM = {
@@ -28,11 +36,16 @@ const INITIAL_FORM = {
 
 export default function DriversPage() {
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
+  const [reportRows, setReportRows] = useState<DriverPerformanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reportLoading, setReportLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [reportError, setReportError] = useState("");
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("");
+  const [reportStartDate, setReportStartDate] = useState("");
+  const [reportEndDate, setReportEndDate] = useState("");
   const [form, setForm] = useState(INITIAL_FORM);
 
   async function loadDrivers() {
@@ -52,9 +65,56 @@ export default function DriversPage() {
     }
   }
 
+  async function loadDriverPerformanceReport(query?: { startDateUtc?: string; endDateUtc?: string }) {
+    setReportLoading(true);
+    setReportError("");
+
+    try {
+      const rows = await driverService.performanceReport(query);
+      setReportRows(Array.isArray(rows) ? (rows as DriverPerformanceRecord[]) : []);
+    } catch (loadError) {
+      console.warn("Failed to load driver performance report");
+      setReportError("Unable to load driver performance report.");
+    } finally {
+      setReportLoading(false);
+    }
+  }
+
   useEffect(() => {
     void loadDrivers();
+    void loadDriverPerformanceReport();
   }, []);
+
+  function buildReportDateQuery(): { startDateUtc?: string; endDateUtc?: string } {
+    const query: { startDateUtc?: string; endDateUtc?: string } = {};
+
+    if (reportStartDate) {
+      query.startDateUtc = new Date(`${reportStartDate}T00:00:00.000Z`).toISOString();
+    }
+
+    if (reportEndDate) {
+      const endExclusive = new Date(`${reportEndDate}T00:00:00.000Z`);
+      endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
+      query.endDateUtc = endExclusive.toISOString();
+    }
+
+    return query;
+  }
+
+  async function applyReportDateFilter() {
+    if (reportStartDate && reportEndDate && reportEndDate < reportStartDate) {
+      setReportError("End date must be greater than or equal to start date.");
+      return;
+    }
+
+    await loadDriverPerformanceReport(buildReportDateQuery());
+  }
+
+  async function clearReportDateFilter() {
+    setReportStartDate("");
+    setReportEndDate("");
+    await loadDriverPerformanceReport();
+  }
 
   const filteredDrivers = useMemo(
     () =>
@@ -151,6 +211,75 @@ export default function DriversPage() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          <div className="card mt-6">
+            <div className="card-header">
+              <h2>Driver Performance Report</h2>
+            </div>
+            <div className="card-body">
+              <div className="form-row mb-4">
+                <div className="form-group">
+                  <label className="form-label">Start Date</label>
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={reportStartDate}
+                    onChange={(event) => setReportStartDate(event.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">End Date</label>
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={reportEndDate}
+                    onChange={(event) => setReportEndDate(event.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="form-row mb-4">
+                <button type="button" className="btn btn-primary" onClick={() => void applyReportDateFilter()} disabled={reportLoading}>
+                  Apply Date Filter
+                </button>
+                <button type="button" className="btn" onClick={() => void clearReportDateFilter()} disabled={reportLoading}>
+                  Clear Filter
+                </button>
+              </div>
+              {reportError ? <div className="alert alert-error">{reportError}</div> : null}
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Driver ID</th>
+                      <th>Deliveries Completed</th>
+                      <th>Avg Delivery Time (min)</th>
+                      <th>On-Time Rate (%)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reportLoading ? (
+                      <tr>
+                        <td colSpan={4}>Loading report...</td>
+                      </tr>
+                    ) : reportRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={4}>No report data available.</td>
+                      </tr>
+                    ) : (
+                      reportRows.map((row) => (
+                        <tr key={row.driverId}>
+                          <td>#{row.driverId}</td>
+                          <td>{row.deliveriesCompleted}</td>
+                          <td>{row.averageDeliveryTimeMinutes.toFixed(2)}</td>
+                          <td>{row.onTimeRatePercent.toFixed(2)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
 
