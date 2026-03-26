@@ -72,4 +72,4 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Backend Integration
 
-This frontend communicates directly with the Meridian backend through the **API Gateway**. Ensure your `.env.local` contains the correct API Gateway URL (typically `http://localhost:5050` for local development) to ensure seamless data fetching.
+This frontend communicates directly with the Meridian backend through the **API Gateway**. Set `NEXT_PUBLIC_API_BASE_URL` in `.env.local` for local development and in the Azure Static Web Apps environment configuration for production deployments. For the current Azure deployment, this should point to `https://ca-api-gateway.happysand-beec0abe.eastasia.azurecontainerapps.io`.

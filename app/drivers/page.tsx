@@ -1,58 +1,329 @@
-// Drivers list page
-import Link from "next/link";
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import apiClient from "@/src/api/client";
+import { driverService } from "@/src/api/services/driverService";
+
+interface DriverRecord {
+  driverId: number;
+  userId: string;
+  fullName: string;
+  licenseNumber: string;
+  licenseExpiry: string;
+  phoneNumber: string;
+  maxWorkingHoursPerDay: number;
+  currentWorkingHoursToday: number;
+  isActive: boolean;
+}
+
+interface DriverPerformanceRecord {
+  driverId: number;
+  deliveriesCompleted: number;
+  averageDeliveryTimeMinutes: number;
+  onTimeRatePercent: number;
+}
+
+const INITIAL_FORM = {
+  userId: "",
+  fullName: "",
+  licenseNumber: "",
+  licenseExpiry: "",
+  phoneNumber: "",
+  maxWorkingHoursPerDay: 8,
+  currentWorkingHoursToday: 0,
+  isActive: true,
+};
 
 export default function DriversPage() {
-    return (
-        <div className="page-container">
-            <div className="page-header">
-                <div className="page-header-left">
-                    <h1>Drivers</h1>
-                    <p>Register and manage fleet drivers and working hours</p>
-                </div>
-                <button className="btn btn-primary">+ Add Driver</button>
-            </div>
+  const [drivers, setDrivers] = useState<DriverRecord[]>([]);
+  const [reportRows, setReportRows] = useState<DriverPerformanceRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [reportLoading, setReportLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [reportError, setReportError] = useState("");
+  const [search, setSearch] = useState("");
+  const [activeFilter, setActiveFilter] = useState("");
+  const [reportStartDate, setReportStartDate] = useState("");
+  const [reportEndDate, setReportEndDate] = useState("");
+  const [form, setForm] = useState(INITIAL_FORM);
 
-            <div className="toolbar">
-                <div className="search-bar">
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style={{ opacity: 0.5, flexShrink: 0 }}>
-                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.099zm-5.242 1.656a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z" />
-                    </svg>
-                    <input type="text" placeholder="Search by name or license…" />
-                </div>
-                <select className="form-select" style={{ width: "auto" }}>
-                    <option value="">All Statuses</option>
-                    <option>Available</option>
-                    <option>OnDuty</option>
-                    <option>OffDuty</option>
-                    <option>OnLeave</option>
-                </select>
-            </div>
+  async function loadDrivers() {
+    setLoading(true);
+    setError("");
 
-            <div className="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Full Name</th>
-                            <th>Phone Number</th>
-                            <th>License Number</th>
-                            <th>Max Hours/Day</th>
-                            <th>Status</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td colSpan={7}>
-                                <div className="empty-state">
-                                    <p>No drivers registered yet.</p>
-                                    <button className="btn btn-primary">Add first driver</button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+    try {
+      const response = await apiClient.get<{ data?: DriverRecord[] }>("/driver/api/drivers", {
+        params: { page: 1, pageSize: 50 },
+      });
+      setDrivers(Array.isArray(response.data?.data) ? response.data.data : []);
+    } catch (loadError) {
+      console.warn("Failed to load drivers");
+      setError("Unable to load drivers.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadDriverPerformanceReport(query?: { startDateUtc?: string; endDateUtc?: string }) {
+    setReportLoading(true);
+    setReportError("");
+
+    try {
+      const rows = await driverService.performanceReport(query);
+      setReportRows(Array.isArray(rows) ? (rows as DriverPerformanceRecord[]) : []);
+    } catch (loadError) {
+      console.warn("Failed to load driver performance report");
+      setReportError("Unable to load driver performance report.");
+    } finally {
+      setReportLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadDrivers();
+    void loadDriverPerformanceReport();
+  }, []);
+
+  function buildReportDateQuery(): { startDateUtc?: string; endDateUtc?: string } {
+    const query: { startDateUtc?: string; endDateUtc?: string } = {};
+
+    if (reportStartDate) {
+      query.startDateUtc = new Date(`${reportStartDate}T00:00:00.000Z`).toISOString();
+    }
+
+    if (reportEndDate) {
+      const endExclusive = new Date(`${reportEndDate}T00:00:00.000Z`);
+      endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
+      query.endDateUtc = endExclusive.toISOString();
+    }
+
+    return query;
+  }
+
+  async function applyReportDateFilter() {
+    if (reportStartDate && reportEndDate && reportEndDate < reportStartDate) {
+      setReportError("End date must be greater than or equal to start date.");
+      return;
+    }
+
+    await loadDriverPerformanceReport(buildReportDateQuery());
+  }
+
+  async function clearReportDateFilter() {
+    setReportStartDate("");
+    setReportEndDate("");
+    await loadDriverPerformanceReport();
+  }
+
+  const filteredDrivers = useMemo(
+    () =>
+      drivers.filter((driver) => {
+        const matchesSearch =
+          search === "" ||
+          driver.fullName.toLowerCase().includes(search.toLowerCase()) ||
+          driver.licenseNumber.toLowerCase().includes(search.toLowerCase()) ||
+          driver.phoneNumber.toLowerCase().includes(search.toLowerCase());
+
+        const matchesActive =
+          activeFilter === "" ||
+          (activeFilter === "active" ? driver.isActive : !driver.isActive);
+
+        return matchesSearch && matchesActive;
+      }),
+    [activeFilter, drivers, search],
+  );
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+
+    try {
+      const response = await apiClient.post<{ data?: DriverRecord }>("/driver/api/drivers", form);
+      const created = response.data?.data;
+      setDrivers((current) => (created ? [created, ...current] : current));
+      setForm(INITIAL_FORM);
+    } catch (saveError) {
+      console.warn("Failed to create driver");
+      setError("Unable to create driver.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="page-container">
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1>Drivers</h1>
+          <p>Register and manage fleet drivers</p>
         </div>
-    );
+      </div>
+
+      {error ? <div className="alert alert-error">{error}</div> : null}
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(360px,1fr)]">
+        <div>
+          <div className="toolbar">
+            <div className="search-bar">
+              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search drivers" />
+            </div>
+            <select className="form-select" style={{ width: "auto" }} value={activeFilter} onChange={(event) => setActiveFilter(event.target.value)}>
+              <option value="">All Drivers</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>License</th>
+                  <th>Phone</th>
+                  <th>Hours</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={6}>Loading drivers...</td>
+                  </tr>
+                ) : filteredDrivers.length === 0 ? (
+                  <tr>
+                    <td colSpan={6}>No drivers found.</td>
+                  </tr>
+                ) : (
+                  filteredDrivers.map((driver) => (
+                    <tr key={driver.driverId}>
+                      <td>#{driver.driverId}</td>
+                      <td>{driver.fullName}</td>
+                      <td>{driver.licenseNumber}</td>
+                      <td>{driver.phoneNumber}</td>
+                      <td>{driver.currentWorkingHoursToday}/{driver.maxWorkingHoursPerDay}</td>
+                      <td>{driver.isActive ? "Active" : "Inactive"}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="card mt-6">
+            <div className="card-header">
+              <h2>Driver Performance Report</h2>
+            </div>
+            <div className="card-body">
+              <div className="form-row mb-4">
+                <div className="form-group">
+                  <label className="form-label">Start Date</label>
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={reportStartDate}
+                    onChange={(event) => setReportStartDate(event.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">End Date</label>
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={reportEndDate}
+                    onChange={(event) => setReportEndDate(event.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="form-row mb-4">
+                <button type="button" className="btn btn-primary" onClick={() => void applyReportDateFilter()} disabled={reportLoading}>
+                  Apply Date Filter
+                </button>
+                <button type="button" className="btn" onClick={() => void clearReportDateFilter()} disabled={reportLoading}>
+                  Clear Filter
+                </button>
+              </div>
+              {reportError ? <div className="alert alert-error">{reportError}</div> : null}
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Driver ID</th>
+                      <th>Deliveries Completed</th>
+                      <th>Avg Delivery Time (min)</th>
+                      <th>On-Time Rate (%)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reportLoading ? (
+                      <tr>
+                        <td colSpan={4}>Loading report...</td>
+                      </tr>
+                    ) : reportRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={4}>No report data available.</td>
+                      </tr>
+                    ) : (
+                      reportRows.map((row) => (
+                        <tr key={row.driverId}>
+                          <td>#{row.driverId}</td>
+                          <td>{row.deliveriesCompleted}</td>
+                          <td>{row.averageDeliveryTimeMinutes.toFixed(2)}</td>
+                          <td>{row.onTimeRatePercent.toFixed(2)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-header">
+            <h2>Add Driver</h2>
+          </div>
+          <div className="card-body">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="form-group">
+                <label className="form-label">User Id</label>
+                <input className="form-input" value={form.userId} onChange={(event) => setForm((current) => ({ ...current, userId: event.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Full Name</label>
+                <input className="form-input" value={form.fullName} onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))} />
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">License Number</label>
+                  <input className="form-input" value={form.licenseNumber} onChange={(event) => setForm((current) => ({ ...current, licenseNumber: event.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">License Expiry</label>
+                  <input className="form-input" type="date" value={form.licenseExpiry} onChange={(event) => setForm((current) => ({ ...current, licenseExpiry: event.target.value }))} />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Phone Number</label>
+                  <input className="form-input" value={form.phoneNumber} onChange={(event) => setForm((current) => ({ ...current, phoneNumber: event.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Max Hours / Day</label>
+                  <input className="form-input" type="number" step="0.5" value={form.maxWorkingHoursPerDay} onChange={(event) => setForm((current) => ({ ...current, maxWorkingHoursPerDay: Number(event.target.value) }))} />
+                </div>
+              </div>
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving ? "Saving..." : "Add Driver"}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
