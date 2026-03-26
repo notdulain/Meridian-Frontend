@@ -43,6 +43,8 @@ export default function DriversPage() {
   const [reportError, setReportError] = useState("");
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("");
+  const [reportStartDate, setReportStartDate] = useState("");
+  const [reportEndDate, setReportEndDate] = useState("");
   const [form, setForm] = useState(INITIAL_FORM);
 
   async function loadDrivers() {
@@ -62,12 +64,14 @@ export default function DriversPage() {
     }
   }
 
-  async function loadDriverPerformanceReport() {
+  async function loadDriverPerformanceReport(query?: { startDateUtc?: string; endDateUtc?: string }) {
     setReportLoading(true);
     setReportError("");
 
     try {
-      const response = await apiClient.get<{ data?: DriverPerformanceRecord[] }>("/driver/api/reports/driver-performance");
+      const response = await apiClient.get<{ data?: DriverPerformanceRecord[] }>("/driver/api/reports/driver-performance", {
+        params: query,
+      });
       setReportRows(Array.isArray(response.data?.data) ? response.data.data : []);
     } catch (loadError) {
       console.warn("Failed to load driver performance report");
@@ -81,6 +85,37 @@ export default function DriversPage() {
     void loadDrivers();
     void loadDriverPerformanceReport();
   }, []);
+
+  function buildReportDateQuery(): { startDateUtc?: string; endDateUtc?: string } {
+    const query: { startDateUtc?: string; endDateUtc?: string } = {};
+
+    if (reportStartDate) {
+      query.startDateUtc = new Date(`${reportStartDate}T00:00:00.000Z`).toISOString();
+    }
+
+    if (reportEndDate) {
+      const endExclusive = new Date(`${reportEndDate}T00:00:00.000Z`);
+      endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
+      query.endDateUtc = endExclusive.toISOString();
+    }
+
+    return query;
+  }
+
+  async function applyReportDateFilter() {
+    if (reportStartDate && reportEndDate && reportEndDate < reportStartDate) {
+      setReportError("End date must be greater than or equal to start date.");
+      return;
+    }
+
+    await loadDriverPerformanceReport(buildReportDateQuery());
+  }
+
+  async function clearReportDateFilter() {
+    setReportStartDate("");
+    setReportEndDate("");
+    await loadDriverPerformanceReport();
+  }
 
   const filteredDrivers = useMemo(
     () =>
@@ -184,6 +219,34 @@ export default function DriversPage() {
               <h2>Driver Performance Report</h2>
             </div>
             <div className="card-body">
+              <div className="form-row mb-4">
+                <div className="form-group">
+                  <label className="form-label">Start Date</label>
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={reportStartDate}
+                    onChange={(event) => setReportStartDate(event.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">End Date</label>
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={reportEndDate}
+                    onChange={(event) => setReportEndDate(event.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="form-row mb-4">
+                <button type="button" className="btn btn-primary" onClick={() => void applyReportDateFilter()} disabled={reportLoading}>
+                  Apply Date Filter
+                </button>
+                <button type="button" className="btn" onClick={() => void clearReportDateFilter()} disabled={reportLoading}>
+                  Clear Filter
+                </button>
+              </div>
               {reportError ? <div className="alert alert-error">{reportError}</div> : null}
               <div className="table-container">
                 <table>
