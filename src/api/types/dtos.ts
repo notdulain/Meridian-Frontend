@@ -56,6 +56,13 @@ export interface DriverDto {
   [key: string]: unknown;
 }
 
+export interface DriverPerformanceReportRowDto {
+  driverId: number;
+  deliveriesCompleted: number;
+  averageDeliveryTimeMinutes: number;
+  onTimeRatePercent: number;
+}
+
 export interface AssignmentDto {
   id: string;
   deliveryId?: string;
@@ -103,6 +110,12 @@ export interface VehicleListQuery {
 export interface DriverListQuery {
   page?: number;
   pageSize?: number;
+  [key: string]: string | number | boolean | null | undefined;
+}
+
+export interface DriverPerformanceReportQuery {
+  startDateUtc?: string;
+  endDateUtc?: string;
   [key: string]: string | number | boolean | null | undefined;
 }
 
