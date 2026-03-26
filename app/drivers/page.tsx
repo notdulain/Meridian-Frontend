@@ -15,6 +15,13 @@ interface DriverRecord {
   isActive: boolean;
 }
 
+interface DriverPerformanceRecord {
+  driverId: number;
+  deliveriesCompleted: number;
+  averageDeliveryTimeMinutes: number;
+  onTimeRatePercent: number;
+}
+
 const INITIAL_FORM = {
   userId: "",
   fullName: "",
@@ -28,9 +35,12 @@ const INITIAL_FORM = {
 
 export default function DriversPage() {
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
+  const [reportRows, setReportRows] = useState<DriverPerformanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reportLoading, setReportLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [reportError, setReportError] = useState("");
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("");
   const [form, setForm] = useState(INITIAL_FORM);
@@ -52,8 +62,24 @@ export default function DriversPage() {
     }
   }
 
+  async function loadDriverPerformanceReport() {
+    setReportLoading(true);
+    setReportError("");
+
+    try {
+      const response = await apiClient.get<{ data?: DriverPerformanceRecord[] }>("/driver/api/reports/driver-performance");
+      setReportRows(Array.isArray(response.data?.data) ? response.data.data : []);
+    } catch (loadError) {
+      console.warn("Failed to load driver performance report");
+      setReportError("Unable to load driver performance report.");
+    } finally {
+      setReportLoading(false);
+    }
+  }
+
   useEffect(() => {
     void loadDrivers();
+    void loadDriverPerformanceReport();
   }, []);
 
   const filteredDrivers = useMemo(
@@ -151,6 +177,47 @@ export default function DriversPage() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          <div className="card mt-6">
+            <div className="card-header">
+              <h2>Driver Performance Report</h2>
+            </div>
+            <div className="card-body">
+              {reportError ? <div className="alert alert-error">{reportError}</div> : null}
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Driver ID</th>
+                      <th>Deliveries Completed</th>
+                      <th>Avg Delivery Time (min)</th>
+                      <th>On-Time Rate (%)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reportLoading ? (
+                      <tr>
+                        <td colSpan={4}>Loading report...</td>
+                      </tr>
+                    ) : reportRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={4}>No report data available.</td>
+                      </tr>
+                    ) : (
+                      reportRows.map((row) => (
+                        <tr key={row.driverId}>
+                          <td>#{row.driverId}</td>
+                          <td>{row.deliveriesCompleted}</td>
+                          <td>{row.averageDeliveryTimeMinutes.toFixed(2)}</td>
+                          <td>{row.onTimeRatePercent.toFixed(2)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
 
