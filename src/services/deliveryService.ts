@@ -9,6 +9,10 @@ export const deliveryService = {
   },
   recommendVehicles: async (id: string): Promise<VehicleItem[]> => {
     const { data } = await api.get<unknown>(`/delivery/api/deliveries/${id}/recommend-vehicles`);
-    return asArray<VehicleItem>(data);
+    const arr = asArray<any>(data);
+    return arr.map(v => ({
+      ...v,
+      id: v.id || v.vehicleId || String(v.licensePlate || Math.random())
+    })) as VehicleItem[];
   },
 };

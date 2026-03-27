@@ -17,6 +17,9 @@ export function LiveTrackingPage() {
   const [deliveryLoading, setDeliveryLoading] = useState(true);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
 
+  // The active assignment IDs array required for joining SignalR tracking groups
+  const [activeAssignmentIds, setActiveAssignmentIds] = useState<number[]>([]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -50,7 +53,25 @@ export function LiveTrackingPage() {
       }
     };
 
+    const loadAssignments = async () => {
+      try {
+        // We fetch active assignments to know which Dispatcher SignalR tracking groups to join
+        const res = await apiClient.get<any>("/assignment/api/assignments?pageSize=100");
+        if (!isMounted) return;
+
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          const activeIds = res.data.data
+            .filter((a: any) => a.status === 'Active')
+            .map((a: any) => a.assignmentId);
+          setActiveAssignmentIds(activeIds);
+        }
+      } catch (e) {
+        console.warn("Failed to load assignments, map will stay idle until assignments are manually provided or retry successful.");
+      }
+    };
+
     void loadDeliveries();
+    void loadAssignments();
 
     return () => {
       isMounted = false;
@@ -87,7 +108,7 @@ export function LiveTrackingPage() {
 
         <div className="grid flex-1 min-h-0 grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 h-full min-h-0">
-            <TrackingMapCard />
+            <TrackingMapCard assignmentIds={activeAssignmentIds} />
           </div>
           <div className="lg:col-span-1 h-full min-h-0">
             <RecommendationPanel

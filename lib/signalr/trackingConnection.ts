@@ -15,6 +15,8 @@ export interface TrackingConnection {
   stop: () => Promise<void>;
   subscribeToVehicleLocations: (handler: (payload: VehicleLocationEvent) => void) => void;
   unsubscribeFromVehicleLocations: () => void;
+  joinAssignmentGroup: (assignmentId: number) => Promise<void>;
+  leaveAssignmentGroup: (assignmentId: number) => Promise<void>;
 }
 
 function getTrackingHubUrl(): string {
@@ -31,6 +33,7 @@ function getTrackingHubUrl(): string {
 export function createTrackingConnection(): TrackingConnection {
   let locationHandler: ((payload: VehicleLocationEvent) => void) | null = null;
   let startPromise: Promise<void> | null = null;
+  const joinedGroups = new Set<number>();
 
   const connection: HubConnection = new HubConnectionBuilder()
     .withUrl(getTrackingHubUrl(), {
@@ -53,6 +56,16 @@ export function createTrackingConnection(): TrackingConnection {
     });
   };
 
+  connection.onreconnected(() => {
+    // MER-247: gracefully handle reconnection by re-joining known groups
+    console.info("[tracking] reconnected, rejoining active assignment groups...");
+    joinedGroups.forEach((id) => {
+      connection.invoke("JoinAssignmentGroup", id).catch(err => {
+        console.error(`[tracking] failed to rejoin group ${id}`, err);
+      });
+    });
+  });
+
   return {
     start: async () => {
       if (connection.state === HubConnectionState.Connected || connection.state === HubConnectionState.Connecting) {
@@ -68,6 +81,12 @@ export function createTrackingConnection(): TrackingConnection {
         startPromise = connection.start()
           .then(() => {
             console.info("[tracking] connected");
+            // Also join any groups that the developer requested before it was strictly connected
+            joinedGroups.forEach((id) => {
+              connection.invoke("JoinAssignmentGroup", id).catch(err => {
+                console.error(`[tracking] failed to join group ${id}`, err);
+              });
+            });
           })
           .catch((error) => Promise.reject(error))
           .finally(() => {
@@ -100,6 +119,28 @@ export function createTrackingConnection(): TrackingConnection {
       connection.off("ReceiveVehicleLocation", locationHandler);
       connection.off("ReceiveLocationUpdate");
       locationHandler = null;
+    },
+    joinAssignmentGroup: async (assignmentId: number) => {
+      joinedGroups.add(assignmentId);
+      if (connection.state === HubConnectionState.Connected) {
+        try {
+          await connection.invoke("JoinAssignmentGroup", assignmentId);
+          console.info(`[tracking] joined group ${assignmentId}`);
+        } catch (e) {
+          console.error(`[tracking] failed to join group ${assignmentId}`, e);
+        }
+      }
+    },
+    leaveAssignmentGroup: async (assignmentId: number) => {
+      joinedGroups.delete(assignmentId);
+      if (connection.state === HubConnectionState.Connected) {
+        try {
+          await connection.invoke("LeaveAssignmentGroup", assignmentId);
+          console.info(`[tracking] left group ${assignmentId}`);
+        } catch (e) {
+          console.error(`[tracking] failed to leave group ${assignmentId}`, e);
+        }
+      }
     },
   };
 }
