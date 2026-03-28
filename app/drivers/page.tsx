@@ -47,6 +47,7 @@ export default function DriversPage() {
   const [reportStartDate, setReportStartDate] = useState("");
   const [reportEndDate, setReportEndDate] = useState("");
   const [form, setForm] = useState(INITIAL_FORM);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   function getErrorMessage(error: unknown, fallback: string) {
     if (typeof error === "object" && error !== null && "response" in error) {
@@ -328,7 +329,23 @@ export default function DriversPage() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Temporary Password</label>
-                  <input className="form-input" type="password" value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))} />
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <input
+                      className="form-input"
+                      style={{ flex: 1 }}
+                      type={isPasswordVisible ? "text" : "password"}
+                      value={form.password}
+                      onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+                    />
+                    <button
+                      type="button"
+                      className="btn"
+                      aria-label={isPasswordVisible ? "Hide temporary password" : "Show temporary password"}
+                      onClick={() => setIsPasswordVisible((current) => !current)}
+                    >
+                      {isPasswordVisible ? "Hide" : "Show"}
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="form-row">
