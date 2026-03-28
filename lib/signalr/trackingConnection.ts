@@ -7,13 +7,13 @@ import {
   HttpTransportType,
   LogLevel,
 } from "@microsoft/signalr";
-import type { VehicleLocationEvent } from "@/lib/types/tracking";
+import type { LocationUpdateEvent } from "@/lib/types/tracking";
 import { getStoredAccessToken } from "@/src/lib/auth/session";
 
 export interface TrackingConnection {
   start: () => Promise<void>;
   stop: () => Promise<void>;
-  subscribeToVehicleLocations: (handler: (payload: VehicleLocationEvent) => void) => void;
+  subscribeToVehicleLocations: (handler: (payload: LocationUpdateEvent) => void) => void;
   unsubscribeFromVehicleLocations: () => void;
   joinAssignmentGroup: (assignmentId: number) => Promise<void>;
   leaveAssignmentGroup: (assignmentId: number) => Promise<void>;
@@ -31,30 +31,19 @@ function getTrackingHubUrl(): string {
 }
 
 export function createTrackingConnection(): TrackingConnection {
-  let locationHandler: ((payload: VehicleLocationEvent) => void) | null = null;
+  let locationHandler: ((payload: LocationUpdateEvent) => void) | null = null;
   let startPromise: Promise<void> | null = null;
   const joinedGroups = new Set<number>();
 
   const connection: HubConnection = new HubConnectionBuilder()
     .withUrl(getTrackingHubUrl(), {
-      transport: HttpTransportType.WebSockets | HttpTransportType.LongPolling,
-      skipNegotiation: false,
+      transport: HttpTransportType.WebSockets,
+      skipNegotiation: true,
       accessTokenFactory: () => getStoredAccessToken() || "",
     })
     .withAutomaticReconnect()
     .configureLogging(LogLevel.None)
     .build();
-
-  const handleLegacyLocationUpdate = (payload: unknown) => {
-    if (!locationHandler || !payload || typeof payload !== "object") return;
-    const record = payload as Record<string, unknown>;
-    locationHandler({
-      vehicleId: String(record.vehicleId ?? record.driverId ?? "unknown"),
-      latitude: Number(record.latitude ?? 0),
-      longitude: Number(record.longitude ?? 0),
-      status: String(record.status ?? "Active"),
-    });
-  };
 
   connection.onreconnected(() => {
     // MER-247: gracefully handle reconnection by re-joining known groups
@@ -104,20 +93,13 @@ export function createTrackingConnection(): TrackingConnection {
       console.info("[tracking] stopping connection");
       await connection.stop();
     },
-    subscribeToVehicleLocations: (handler) => {
-      if (locationHandler) {
-        connection.off("ReceiveVehicleLocation", locationHandler);
-      }
-
-      connection.off("ReceiveLocationUpdate");
+    subscribeToVehicleLocations: (handler: (location: LocationUpdateEvent) => void) => {
       locationHandler = handler;
-      connection.on("ReceiveVehicleLocation", locationHandler);
-      connection.on("ReceiveLocationUpdate", handleLegacyLocationUpdate);
+      connection.on("ReceiveLocationUpdate", handler);
     },
     unsubscribeFromVehicleLocations: () => {
       if (!locationHandler) return;
-      connection.off("ReceiveVehicleLocation", locationHandler);
-      connection.off("ReceiveLocationUpdate");
+      connection.off("ReceiveLocationUpdate", locationHandler);
       locationHandler = null;
     },
     joinAssignmentGroup: async (assignmentId: number) => {

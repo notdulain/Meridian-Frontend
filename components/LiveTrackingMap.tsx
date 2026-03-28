@@ -4,7 +4,7 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { divIcon, type DivIcon, type Marker as LeafletMarker } from "leaflet";
 import { createTrackingConnection, type TrackingConnection } from "@/lib/signalr/trackingConnection";
-import type { LiveVehiclePosition, VehicleLocationEvent } from "@/lib/types/tracking";
+import type { LiveVehiclePosition, LocationUpdateEvent } from "@/lib/types/tracking";
 
 const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false });
@@ -67,7 +67,7 @@ const VehicleMarker = memo(function VehicleMarker({ vehicle }: { vehicle: LiveVe
     >
       <Popup>
         <div className="min-w-32">
-          <div className="text-sm font-semibold text-slate-900">Vehicle {vehicle.vehicleId}</div>
+          <div className="text-sm font-semibold text-slate-900">Driver #{vehicle.vehicleId}</div>
           <div className="mt-1 text-xs uppercase tracking-wide text-slate-500">{vehicle.status}</div>
           <div className="mt-2 text-xs text-slate-600">
             {vehicle.lat.toFixed(5)}, {vehicle.lng.toFixed(5)}
@@ -87,28 +87,29 @@ export function LiveTrackingMap({ className, onVehicleCountChange, assignmentIds
   useEffect(() => {
     const connection = createTrackingConnection();
 
-    const handleLocation = (payload: VehicleLocationEvent) => {
+    const handleLocation = (payload: LocationUpdateEvent) => {
+      setConnectionError(null);
       setVehicles((current) => {
+        const vehicleKey = payload.driverId.toString();
         const nextVehicle: LiveVehiclePosition = {
-          vehicleId: payload.vehicleId,
+          vehicleId: vehicleKey,
           lat: payload.latitude,
           lng: payload.longitude,
-          status: payload.status,
+          status: "Moving",
         };
 
-        const previous = current[payload.vehicleId];
+        const previous = current[vehicleKey];
         if (
           previous &&
           previous.lat === nextVehicle.lat &&
-          previous.lng === nextVehicle.lng &&
-          previous.status === nextVehicle.status
+          previous.lng === nextVehicle.lng
         ) {
           return current;
         }
 
         return {
           ...current,
-          [payload.vehicleId]: nextVehicle,
+          [vehicleKey]: nextVehicle,
         };
       });
     };

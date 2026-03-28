@@ -22,3 +22,13 @@ export interface VehicleLocationEvent {
   status: string;
 }
 
+export interface LocationUpdateEvent {
+  locationUpdateId: number;
+  assignmentId: number;
+  driverId: number;
+  latitude: number;
+  longitude: number;
+  timestamp: string;
+  speedKmh?: number | null;
+}
+
