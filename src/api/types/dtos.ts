@@ -30,6 +30,43 @@ export interface UserDto {
   isActive?: boolean;
 }
 
+export interface CreateDriverAccountRequestDto {
+  fullName: string;
+  email: string;
+  password: string;
+  licenseNumber: string;
+  licenseExpiry: string;
+  phoneNumber: string;
+  maxWorkingHoursPerDay: number;
+}
+
+export interface DriverProfileDto {
+  driverId: number;
+  userId: string;
+  fullName: string;
+  licenseNumber: string;
+  licenseExpiry: string;
+  phoneNumber: string;
+  maxWorkingHoursPerDay: number;
+  currentWorkingHoursToday: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateDriverAccountResponseDto {
+  user: {
+    userId: number;
+    fullName: string;
+    email: string;
+    role: AuthRole;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
+  driver: DriverProfileDto;
+}
+
 export interface RoleDto {
   id: string;
   name: string;

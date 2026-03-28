@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import apiClient from "@/src/api/client";
 import { driverService } from "@/src/api/services/driverService";
+import { userService } from "@/src/api/services/userService";
 
 interface DriverRecord {
   driverId: number;
@@ -24,14 +25,13 @@ interface DriverPerformanceRecord {
 }
 
 const INITIAL_FORM = {
-  userId: "",
   fullName: "",
+  email: "",
+  password: "",
   licenseNumber: "",
   licenseExpiry: "",
   phoneNumber: "",
   maxWorkingHoursPerDay: 8,
-  currentWorkingHoursToday: 0,
-  isActive: true,
 };
 
 export default function DriversPage() {
@@ -48,6 +48,22 @@ export default function DriversPage() {
   const [reportEndDate, setReportEndDate] = useState("");
   const [form, setForm] = useState(INITIAL_FORM);
 
+  function getErrorMessage(error: unknown, fallback: string) {
+    if (typeof error === "object" && error !== null && "response" in error) {
+      const response = (error as { response?: { data?: unknown } }).response;
+      const data = response?.data;
+
+      if (typeof data === "object" && data !== null && "message" in data) {
+        const message = (data as { message?: unknown }).message;
+        if (typeof message === "string" && message.trim().length > 0) {
+          return message;
+        }
+      }
+    }
+
+    return fallback;
+  }
+
   async function loadDrivers() {
     setLoading(true);
     setError("");
@@ -57,7 +73,7 @@ export default function DriversPage() {
         params: { page: 1, pageSize: 50 },
       });
       setDrivers(Array.isArray(response.data?.data) ? response.data.data : []);
-    } catch (loadError) {
+    } catch {
       console.warn("Failed to load drivers");
       setError("Unable to load drivers.");
     } finally {
@@ -72,7 +88,7 @@ export default function DriversPage() {
     try {
       const rows = await driverService.performanceReport(query);
       setReportRows(Array.isArray(rows) ? (rows as DriverPerformanceRecord[]) : []);
-    } catch (loadError) {
+    } catch {
       console.warn("Failed to load driver performance report");
       setReportError("Unable to load driver performance report.");
     } finally {
@@ -140,13 +156,25 @@ export default function DriversPage() {
     setError("");
 
     try {
-      const response = await apiClient.post<{ data?: DriverRecord }>("/driver/api/drivers", form);
-      const created = response.data?.data;
-      setDrivers((current) => (created ? [created, ...current] : current));
+      const created = await userService.createDriverAccount(form);
+      const driver = created.driver;
+      const createdRecord: DriverRecord = {
+        driverId: driver.driverId,
+        userId: driver.userId,
+        fullName: driver.fullName,
+        licenseNumber: driver.licenseNumber,
+        licenseExpiry: driver.licenseExpiry,
+        phoneNumber: driver.phoneNumber,
+        maxWorkingHoursPerDay: driver.maxWorkingHoursPerDay,
+        currentWorkingHoursToday: driver.currentWorkingHoursToday,
+        isActive: driver.isActive,
+      };
+
+      setDrivers((current) => [createdRecord, ...current]);
       setForm(INITIAL_FORM);
-    } catch (saveError) {
+    } catch (saveError: unknown) {
       console.warn("Failed to create driver");
-      setError("Unable to create driver.");
+      setError(getErrorMessage(saveError, "Unable to create driver account."));
     } finally {
       setSaving(false);
     }
@@ -285,17 +313,23 @@ export default function DriversPage() {
 
         <div className="card">
           <div className="card-header">
-            <h2>Add Driver</h2>
+            <h2>Create Driver Account</h2>
           </div>
           <div className="card-body">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="form-group">
-                <label className="form-label">User Id</label>
-                <input className="form-input" value={form.userId} onChange={(event) => setForm((current) => ({ ...current, userId: event.target.value }))} />
-              </div>
-              <div className="form-group">
                 <label className="form-label">Full Name</label>
                 <input className="form-input" value={form.fullName} onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))} />
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Email</label>
+                  <input className="form-input" type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Temporary Password</label>
+                  <input className="form-input" type="password" value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))} />
+                </div>
               </div>
               <div className="form-row">
                 <div className="form-group">
@@ -318,7 +352,7 @@ export default function DriversPage() {
                 </div>
               </div>
               <button type="submit" className="btn btn-primary" disabled={saving}>
-                {saving ? "Saving..." : "Add Driver"}
+                {saving ? "Creating..." : "Create Driver Account"}
               </button>
             </form>
           </div>

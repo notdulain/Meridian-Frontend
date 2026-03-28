@@ -1,9 +1,11 @@
 import { API } from "@/src/api/definitions";
-import type { RoleDto, UserDto } from "@/src/api/types/dtos";
+import type { CreateDriverAccountRequestDto, CreateDriverAccountResponseDto, RoleDto, UserDto } from "@/src/api/types/dtos";
 import { apiRequest } from "@/src/api/utils/request";
 
 export const userService = {
   list: () => apiRequest<UserDto[]>(API.users.list),
+  createDriverAccount: (payload: CreateDriverAccountRequestDto) =>
+    apiRequest<CreateDriverAccountResponseDto, CreateDriverAccountRequestDto>(API.users.createDriverAccount, { data: payload }),
   byId: (id: string) => apiRequest<UserDto>(API.users.byId, { params: { id } }),
   me: () => apiRequest<UserDto>(API.users.me),
   update: (id: string, payload: Partial<UserDto>) =>

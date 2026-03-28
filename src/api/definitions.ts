@@ -9,6 +9,7 @@ export const API = {
 
   users: {
     list: "GET /api/users",
+    createDriverAccount: "POST /api/users/driver-accounts",
     byId: "GET /api/users/:id",
     me: "GET /api/users/me",
     update: "PUT /api/users/:id",
