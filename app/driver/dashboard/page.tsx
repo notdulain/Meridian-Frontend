@@ -4,12 +4,20 @@ import { useEffect, useState } from "react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { useAuthStore } from "@/store/authStore";
 import { assignmentService } from "@/src/services/assignmentService";
+import { driverService, type DriverProfile } from "@/src/services/driverService";
 import { useLiveGeolocation } from "@/src/hooks/useLiveGeolocation";
+
+interface ActiveAssignment {
+    assignmentId: number;
+    deliveryId: number;
+    vehicleId: number;
+}
 
 export default function DriverDashboardPage() {
     const { user } = useAuthStore();
     
-    const [activeAssignment, setActiveAssignment] = useState<any>(null);
+    const [driverProfile, setDriverProfile] = useState<DriverProfile | null>(null);
+    const [activeAssignment, setActiveAssignment] = useState<ActiveAssignment | null>(null);
     const [loading, setLoading] = useState(true);
     const [trackingEnabled, setTrackingEnabled] = useState(false);
 
@@ -18,9 +26,21 @@ export default function DriverDashboardPage() {
         let isMounted = true;
         
         async function fetchAssignment() {
-            if (!user?.id) return;
             try {
-                const assignment = await assignmentService.getActiveForDriver(user.id);
+                const profile = await driverService.me();
+                if (!isMounted) return;
+
+                setDriverProfile(profile);
+
+                if (!profile?.driverId) {
+                    setActiveAssignment(null);
+                    setTrackingEnabled(false);
+                    return;
+                }
+
+                const assignment = await assignmentService.getActiveForDriver(profile.driverId) as ActiveAssignment | null;
+                if (!isMounted) return;
+
                 if (isMounted) {
                     setActiveAssignment(assignment);
                     // Automatically enable tracking if an active assignment exists
@@ -39,12 +59,12 @@ export default function DriverDashboardPage() {
             isMounted = false;
             setTrackingEnabled(false);
         };
-    }, [user?.id]);
+    }, []);
 
     // Initialize GPS tracking (MER-83)
     const { error: gpsError, lastSent } = useLiveGeolocation({
         assignmentId: activeAssignment?.assignmentId,
-        driverId: user?.id,
+        driverId: driverProfile?.driverId,
         enabled: trackingEnabled,
     });
 
@@ -54,7 +74,7 @@ export default function DriverDashboardPage() {
                 <div className="page-header">
                     <div className="page-header-left">
                         <h1>Driver Dashboard</h1>
-                        <p>Welcome back, {user?.name || user?.email || "Driver"}</p>
+                        <p>Welcome back, {driverProfile?.fullName || user?.name || user?.email || "Driver"}</p>
                     </div>
                     {activeAssignment && (
                         <div>

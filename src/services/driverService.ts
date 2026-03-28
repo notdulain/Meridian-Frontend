@@ -5,12 +5,32 @@ import type { DriverItem } from "@/src/services/types";
 interface DriverPayload {
   id?: string | number;
   driverId?: string | number;
+  userId?: string;
   fullName?: string;
+  phoneNumber?: string;
+  licenseNumber?: string;
+  licenseExpiry?: string;
   status?: string;
   availability?: string;
   isActive?: boolean;
   currentWorkingHoursToday?: number;
   maxWorkingHoursPerDay?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface DriverProfile {
+  driverId: number;
+  userId: string;
+  fullName?: string;
+  phoneNumber?: string;
+  licenseNumber?: string;
+  licenseExpiry?: string;
+  isActive?: boolean;
+  currentWorkingHoursToday?: number;
+  maxWorkingHoursPerDay?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export const driverService = {
@@ -25,5 +45,28 @@ export const driverService = {
         driver.availability ??
         ((driver.currentWorkingHoursToday ?? 0) < (driver.maxWorkingHoursPerDay ?? 0) ? "Available" : "Unavailable"),
     })) as DriverItem[];
+  },
+  me: async (): Promise<DriverProfile | null> => {
+    try {
+      const { data } = await api.get<{ data?: DriverPayload }>("/driver/api/drivers/me");
+      const driver = data?.data;
+      if (!driver?.driverId) return null;
+
+      return {
+        driverId: Number(driver.driverId),
+        userId: String(driver.userId ?? ""),
+        fullName: driver.fullName,
+        phoneNumber: driver.phoneNumber,
+        licenseNumber: driver.licenseNumber,
+        licenseExpiry: driver.licenseExpiry,
+        isActive: driver.isActive,
+        currentWorkingHoursToday: driver.currentWorkingHoursToday,
+        maxWorkingHoursPerDay: driver.maxWorkingHoursPerDay,
+        createdAt: driver.createdAt,
+        updatedAt: driver.updatedAt,
+      };
+    } catch {
+      return null;
+    }
   },
 };
