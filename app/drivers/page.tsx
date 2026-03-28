@@ -50,14 +50,29 @@ export default function DriversPage() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   function getErrorMessage(error: unknown, fallback: string) {
-    if (typeof error === "object" && error !== null && "response" in error) {
-      const response = (error as { response?: { data?: unknown } }).response;
-      const data = response?.data;
-
-      if (typeof data === "object" && data !== null && "message" in data) {
-        const message = (data as { message?: unknown }).message;
+    if (typeof error === "object" && error !== null) {
+      if ("message" in error) {
+        const message = (error as { message?: unknown }).message;
         if (typeof message === "string" && message.trim().length > 0) {
           return message;
+        }
+      }
+
+      if ("details" in error) {
+        const details = (error as { details?: { message?: unknown; errors?: unknown } }).details;
+        if (typeof details?.message === "string" && details.message.trim().length > 0) {
+          return details.message;
+        }
+
+        if (details?.errors && typeof details.errors === "object") {
+          const firstEntry = Object.values(details.errors)[0];
+          if (Array.isArray(firstEntry) && typeof firstEntry[0] === "string" && firstEntry[0].trim().length > 0) {
+            return firstEntry[0];
+          }
+
+          if (typeof firstEntry === "string" && firstEntry.trim().length > 0) {
+            return firstEntry;
+          }
         }
       }
     }
