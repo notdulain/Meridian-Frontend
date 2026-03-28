@@ -1,18 +1,22 @@
 export interface VehicleRecommendation {
   vehicleId: string;
-  driverName: string;
-  distanceKm: number;
-  etaMinutes: number;
-  fuelCost: number;
+  plateNumber?: string;
+  make?: string;
+  model?: string;
+  currentLocation?: string;
+  distanceToPickupKm?: number;
   reason: string;
   score: number;
 }
 
 export interface LiveVehiclePosition {
+  assignmentId: string;
+  driverId: string;
   vehicleId: string;
   lat: number;
   lng: number;
   status: string;
+  timestamp?: string;
 }
 
 export interface VehicleLocationEvent {
@@ -32,3 +36,10 @@ export interface LocationUpdateEvent {
   speedKmh?: number | null;
 }
 
+export interface TrackedAssignment {
+  assignmentId: number;
+  deliveryId: number;
+  driverId: number;
+  vehicleId: number;
+  status?: string;
+}

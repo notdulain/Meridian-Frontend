@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Activity, MapPinned, Radio } from "lucide-react";
 import { LiveTrackingMap } from "@/components/LiveTrackingMap";
+import type { TrackedAssignment } from "@/lib/types/tracking";
 import { PREFERENCE_KEYS, getBooleanPreference } from "@/src/lib/preferences";
 
-export function TrackingMapCard({ assignmentIds = [] }: { assignmentIds?: number[] }) {
+export function TrackingMapCard({ assignments = [] }: { assignments?: TrackedAssignment[] }) {
   const [vehicleCount, setVehicleCount] = useState(0);
   const [mapEnabled] = useState(() => getBooleanPreference(PREFERENCE_KEYS.liveTrackingMapEnabled, true));
 
@@ -40,7 +40,7 @@ export function TrackingMapCard({ assignmentIds = [] }: { assignmentIds?: number
       <div className="relative flex-1 w-full bg-slate-950 overflow-hidden">
         {mapEnabled && (
           <LiveTrackingMap 
-            assignmentIds={assignmentIds} 
+            assignments={assignments} 
             onVehicleCountChange={setVehicleCount} 
             className="h-full w-full" 
           />
