@@ -84,6 +84,18 @@ export interface TrackingLocationDto {
   timestamp?: string;
 }
 
+export interface DashboardSummaryDto {
+  totalDeliveries: number;
+  activeDeliveries: number;
+  completedDeliveries: number;
+  overdueDeliveries: number;
+  availableVehicles: number;
+  vehiclesOnTrip: number;
+  availableDrivers: number;
+  activeAssignments: number;
+  generatedAtUtc: string;
+}
+
 export interface HealthDto {
   status?: string;
   [key: string]: unknown;
