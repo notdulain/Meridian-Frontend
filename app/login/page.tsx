@@ -6,7 +6,7 @@ import type { AuthRole, LoginRequest, RegisterRequest } from "@/lib/types";
 import { authService } from "@/services/authService";
 import { useAuthStore } from "@/store/authStore";
 
-const ROLE_OPTIONS: AuthRole[] = ["Driver", "Dispatcher", "Admin"];
+const ROLE_OPTIONS: AuthRole[] = ["Dispatcher", "Admin"];
 
 export default function LoginPage() {
     const router = useRouter();
@@ -190,7 +190,7 @@ export default function LoginPage() {
                         {mode === "signin" ? "Sign in to Meridian" : "Create Meridian account"}
                     </h1>
                     <p style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 4 }}>
-                        Select role and continue
+                        {mode === "signin" ? "Use your Meridian credentials to continue" : "Create an admin or dispatcher account"}
                     </p>
                 </div>
 
