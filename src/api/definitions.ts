@@ -83,6 +83,10 @@ export const API = {
     hub: "WS /hubs/tracking",
   },
 
+  dashboard: {
+    summary: "GET /api/dashboard/summary",
+  },
+
   gatewayHealth: {
     root: "GET /",
     diagnostics: "GET /diagnostics",
