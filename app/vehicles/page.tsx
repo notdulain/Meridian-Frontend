@@ -135,6 +135,18 @@ export default function VehiclesPage() {
     [search, statusFilter, vehicles],
   );
 
+  const filteredReportRows = useMemo(
+    () =>
+      reportRows.filter((row) => {
+        if (reportVehicleFilter === "") {
+          return true;
+        }
+
+        return String(row.vehicleId) === reportVehicleFilter;
+      }),
+    [reportRows, reportVehicleFilter],
+  );
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
@@ -242,6 +254,23 @@ export default function VehiclesPage() {
                 </div>
               </div>
               <div className="form-row mb-4">
+                <div className="form-group">
+                  <label className="form-label">Vehicle</label>
+                  <select
+                    className="form-select"
+                    value={reportVehicleFilter}
+                    onChange={(event) => setReportVehicleFilter(event.target.value)}
+                  >
+                    <option value="">All Vehicles</option>
+                    {vehicles.map((vehicle) => (
+                      <option key={vehicle.vehicleId} value={String(vehicle.vehicleId)}>
+                        #{vehicle.vehicleId} - {vehicle.plateNumber}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-row mb-4">
                 <button type="button" className="btn btn-primary" onClick={() => void applyReportFilters()} disabled={reportLoading}>
                   Apply Report Filters
                 </button>
@@ -265,12 +294,12 @@ export default function VehiclesPage() {
                       <tr>
                         <td colSpan={4}>Loading report...</td>
                       </tr>
-                    ) : reportRows.length === 0 ? (
+                    ) : filteredReportRows.length === 0 ? (
                       <tr>
                         <td colSpan={4}>No report data available.</td>
                       </tr>
                     ) : (
-                      reportRows.map((row) => (
+                      filteredReportRows.map((row) => (
                         <tr key={row.vehicleId}>
                           <td>#{row.vehicleId}</td>
                           <td>{row.tripsCount}</td>
