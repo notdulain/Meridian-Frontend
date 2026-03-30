@@ -63,6 +63,13 @@ export interface DriverPerformanceReportRowDto {
   onTimeRatePercent: number;
 }
 
+export interface VehicleUtilizationReportRowDto {
+  vehicleId: number;
+  tripsCount: number;
+  kilometersDriven: number;
+  idleTimeMinutes: number;
+}
+
 export interface AssignmentDto {
   id: string;
   deliveryId?: string;
@@ -126,6 +133,12 @@ export interface DriverListQuery {
 }
 
 export interface DriverPerformanceReportQuery {
+  startDateUtc?: string;
+  endDateUtc?: string;
+  [key: string]: string | number | boolean | null | undefined;
+}
+
+export interface VehicleUtilizationReportQuery {
   startDateUtc?: string;
   endDateUtc?: string;
   [key: string]: string | number | boolean | null | undefined;

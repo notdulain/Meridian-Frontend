@@ -1,5 +1,5 @@
 import { API } from "@/src/api/definitions";
-import type { VehicleDto, VehicleListQuery } from "@/src/api/types/dtos";
+import type { VehicleDto, VehicleListQuery, VehicleUtilizationReportQuery, VehicleUtilizationReportRowDto } from "@/src/api/types/dtos";
 import { apiRequest } from "@/src/api/utils/request";
 
 export const vehicleService = {
@@ -12,4 +12,6 @@ export const vehicleService = {
     apiRequest<VehicleDto, { status: string }>(API.vehicles.updateStatus, { params: { id }, data: payload }),
   delete: (id: string) => apiRequest<void>(API.vehicles.delete, { params: { id } }),
   available: () => apiRequest<VehicleDto[]>(API.vehicles.available),
+  utilizationReport: (query?: VehicleUtilizationReportQuery) =>
+    apiRequest<VehicleUtilizationReportRowDto[]>(API.reports.vehicleUtilization, { query }),
 };
