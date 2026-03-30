@@ -44,6 +44,9 @@ export default function VehiclesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [reportError, setReportError] = useState("");
+  const [reportStartDate, setReportStartDate] = useState("");
+  const [reportEndDate, setReportEndDate] = useState("");
+  const [reportVehicleFilter, setReportVehicleFilter] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [form, setForm] = useState(INITIAL_FORM);
@@ -65,12 +68,12 @@ export default function VehiclesPage() {
     }
   }
 
-  async function loadVehicleUtilizationReport() {
+  async function loadVehicleUtilizationReport(query?: { startDateUtc?: string; endDateUtc?: string }) {
     setReportLoading(true);
     setReportError("");
 
     try {
-      const rows = await vehicleService.utilizationReport();
+      const rows = await vehicleService.utilizationReport(query);
       setReportRows(Array.isArray(rows) ? (rows as VehicleUtilizationRecord[]) : []);
     } catch (loadError) {
       console.warn("Failed to load vehicle utilization report");
@@ -84,6 +87,38 @@ export default function VehiclesPage() {
     void loadVehicles();
     void loadVehicleUtilizationReport();
   }, []);
+
+  function buildReportDateQuery(): { startDateUtc?: string; endDateUtc?: string } {
+    const query: { startDateUtc?: string; endDateUtc?: string } = {};
+
+    if (reportStartDate) {
+      query.startDateUtc = new Date(`${reportStartDate}T00:00:00.000Z`).toISOString();
+    }
+
+    if (reportEndDate) {
+      const endExclusive = new Date(`${reportEndDate}T00:00:00.000Z`);
+      endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
+      query.endDateUtc = endExclusive.toISOString();
+    }
+
+    return query;
+  }
+
+  async function applyReportFilters() {
+    if (reportStartDate && reportEndDate && reportEndDate < reportStartDate) {
+      setReportError("End date must be greater than or equal to start date.");
+      return;
+    }
+
+    await loadVehicleUtilizationReport(buildReportDateQuery());
+  }
+
+  async function clearReportFilters() {
+    setReportStartDate("");
+    setReportEndDate("");
+    setReportVehicleFilter("");
+    await loadVehicleUtilizationReport();
+  }
 
   const filteredVehicles = useMemo(
     () =>
@@ -186,6 +221,34 @@ export default function VehiclesPage() {
               <h2>Vehicle Utilization Report</h2>
             </div>
             <div className="card-body">
+              <div className="form-row mb-4">
+                <div className="form-group">
+                  <label className="form-label">Start Date</label>
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={reportStartDate}
+                    onChange={(event) => setReportStartDate(event.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">End Date</label>
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={reportEndDate}
+                    onChange={(event) => setReportEndDate(event.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="form-row mb-4">
+                <button type="button" className="btn btn-primary" onClick={() => void applyReportFilters()} disabled={reportLoading}>
+                  Apply Report Filters
+                </button>
+                <button type="button" className="btn" onClick={() => void clearReportFilters()} disabled={reportLoading}>
+                  Clear Filters
+                </button>
+              </div>
               {reportError ? <div className="alert alert-error">{reportError}</div> : null}
               <div className="table-container">
                 <table>
