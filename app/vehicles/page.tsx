@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import apiClient from "@/src/api/client";
+import { vehicleService } from "@/src/api/services/vehicleService";
 
 interface VehicleRecord {
   vehicleId: number;
@@ -14,6 +15,13 @@ interface VehicleRecord {
   capacityM3: number;
   fuelEfficiencyKmPerLitre: number;
   status: string;
+}
+
+interface VehicleUtilizationRecord {
+  vehicleId: number;
+  tripsCount: number;
+  kilometersDriven: number;
+  idleTimeMinutes: number;
 }
 
 const INITIAL_FORM = {
@@ -30,9 +38,12 @@ const INITIAL_FORM = {
 
 export default function VehiclesPage() {
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
+  const [reportRows, setReportRows] = useState<VehicleUtilizationRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reportLoading, setReportLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [reportError, setReportError] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [form, setForm] = useState(INITIAL_FORM);
@@ -54,8 +65,24 @@ export default function VehiclesPage() {
     }
   }
 
+  async function loadVehicleUtilizationReport() {
+    setReportLoading(true);
+    setReportError("");
+
+    try {
+      const rows = await vehicleService.utilizationReport();
+      setReportRows(Array.isArray(rows) ? (rows as VehicleUtilizationRecord[]) : []);
+    } catch (loadError) {
+      console.warn("Failed to load vehicle utilization report");
+      setReportError("Unable to load vehicle utilization report.");
+    } finally {
+      setReportLoading(false);
+    }
+  }
+
   useEffect(() => {
     void loadVehicles();
+    void loadVehicleUtilizationReport();
   }, []);
 
   const filteredVehicles = useMemo(
@@ -152,6 +179,47 @@ export default function VehiclesPage() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          <div className="card mt-6">
+            <div className="card-header">
+              <h2>Vehicle Utilization Report</h2>
+            </div>
+            <div className="card-body">
+              {reportError ? <div className="alert alert-error">{reportError}</div> : null}
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Vehicle ID</th>
+                      <th>Trips Count</th>
+                      <th>Kilometers Driven</th>
+                      <th>Idle Time (min)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reportLoading ? (
+                      <tr>
+                        <td colSpan={4}>Loading report...</td>
+                      </tr>
+                    ) : reportRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={4}>No report data available.</td>
+                      </tr>
+                    ) : (
+                      reportRows.map((row) => (
+                        <tr key={row.vehicleId}>
+                          <td>#{row.vehicleId}</td>
+                          <td>{row.tripsCount}</td>
+                          <td>{row.kilometersDriven.toFixed(2)}</td>
+                          <td>{row.idleTimeMinutes.toFixed(0)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
 
