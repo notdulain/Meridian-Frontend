@@ -3,7 +3,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { divIcon, type DivIcon, type Marker as LeafletMarker } from "leaflet";
-import { createTrackingConnection } from "@/lib/signalr/trackingConnection";
+import { createTrackingConnection, type TrackingConnection } from "@/lib/signalr/trackingConnection";
 import type { LiveVehiclePosition, VehicleLocationEvent } from "@/lib/types/tracking";
 
 const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false });
@@ -16,6 +16,7 @@ const DEFAULT_CENTER: [number, number] = [7.8731, 80.7718];
 interface LiveTrackingMapProps {
   className?: string;
   onVehicleCountChange?: (count: number) => void;
+  assignmentIds?: number[];
 }
 
 function createStatusIcon(color: string): DivIcon {
@@ -77,10 +78,12 @@ const VehicleMarker = memo(function VehicleMarker({ vehicle }: { vehicle: LiveVe
   );
 });
 
-export function LiveTrackingMap({ className, onVehicleCountChange }: LiveTrackingMapProps) {
+export function LiveTrackingMap({ className, onVehicleCountChange, assignmentIds = [] }: LiveTrackingMapProps) {
   const [vehicles, setVehicles] = useState<Record<string, LiveVehiclePosition>>({});
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [activeConnection, setActiveConnection] = useState<TrackingConnection | null>(null);
 
+  // 1. Manage the core SignalR connection
   useEffect(() => {
     const connection = createTrackingConnection();
 
@@ -112,15 +115,31 @@ export function LiveTrackingMap({ className, onVehicleCountChange }: LiveTrackin
 
     connection.subscribeToVehicleLocations(handleLocation);
 
-    void connection.start().catch(() => {
-      setConnectionError("Live tracking is temporarily unavailable.");
-    });
+    connection.start()
+      .then(() => setActiveConnection(connection))
+      .catch(() => {
+        setConnectionError("Live tracking is temporarily unavailable.");
+      });
 
     return () => {
       connection.unsubscribeFromVehicleLocations();
       void connection.stop().catch(() => undefined);
     };
   }, []);
+
+  // 2. React to prop changes (MER-244: Subscribe to dispatcher client groups)
+  const previousIdsRef = useRef<number[]>([]);
+  useEffect(() => {
+    if (!activeConnection) return;
+
+    const toJoin = assignmentIds.filter((id) => !previousIdsRef.current.includes(id));
+    const toLeave = previousIdsRef.current.filter((id) => !assignmentIds.includes(id));
+
+    toJoin.forEach((id) => void activeConnection.joinAssignmentGroup(id));
+    toLeave.forEach((id) => void activeConnection.leaveAssignmentGroup(id));
+
+    previousIdsRef.current = assignmentIds;
+  }, [activeConnection, assignmentIds]);
 
   const vehicleList = useMemo(() => Object.values(vehicles), [vehicles]);
 
