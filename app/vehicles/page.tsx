@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import apiClient from "@/src/api/client";
+import { vehicleService } from "@/src/api/services/vehicleService";
 
 interface VehicleRecord {
   vehicleId: number;
@@ -14,6 +15,13 @@ interface VehicleRecord {
   capacityM3: number;
   fuelEfficiencyKmPerLitre: number;
   status: string;
+}
+
+interface VehicleUtilizationRecord {
+  vehicleId: number;
+  tripsCount: number;
+  kilometersDriven: number;
+  idleTimeMinutes: number;
 }
 
 const INITIAL_FORM = {
@@ -30,9 +38,15 @@ const INITIAL_FORM = {
 
 export default function VehiclesPage() {
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
+  const [reportRows, setReportRows] = useState<VehicleUtilizationRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reportLoading, setReportLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [reportError, setReportError] = useState("");
+  const [reportStartDate, setReportStartDate] = useState("");
+  const [reportEndDate, setReportEndDate] = useState("");
+  const [reportVehicleFilter, setReportVehicleFilter] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [form, setForm] = useState(INITIAL_FORM);
@@ -54,9 +68,57 @@ export default function VehiclesPage() {
     }
   }
 
+  async function loadVehicleUtilizationReport(query?: { startDateUtc?: string; endDateUtc?: string }) {
+    setReportLoading(true);
+    setReportError("");
+
+    try {
+      const rows = await vehicleService.utilizationReport(query);
+      setReportRows(Array.isArray(rows) ? (rows as VehicleUtilizationRecord[]) : []);
+    } catch (loadError) {
+      console.warn("Failed to load vehicle utilization report");
+      setReportError("Unable to load vehicle utilization report.");
+    } finally {
+      setReportLoading(false);
+    }
+  }
+
   useEffect(() => {
     void loadVehicles();
+    void loadVehicleUtilizationReport();
   }, []);
+
+  function buildReportDateQuery(): { startDateUtc?: string; endDateUtc?: string } {
+    const query: { startDateUtc?: string; endDateUtc?: string } = {};
+
+    if (reportStartDate) {
+      query.startDateUtc = new Date(`${reportStartDate}T00:00:00.000Z`).toISOString();
+    }
+
+    if (reportEndDate) {
+      const endExclusive = new Date(`${reportEndDate}T00:00:00.000Z`);
+      endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
+      query.endDateUtc = endExclusive.toISOString();
+    }
+
+    return query;
+  }
+
+  async function applyReportFilters() {
+    if (reportStartDate && reportEndDate && reportEndDate < reportStartDate) {
+      setReportError("End date must be greater than or equal to start date.");
+      return;
+    }
+
+    await loadVehicleUtilizationReport(buildReportDateQuery());
+  }
+
+  async function clearReportFilters() {
+    setReportStartDate("");
+    setReportEndDate("");
+    setReportVehicleFilter("");
+    await loadVehicleUtilizationReport();
+  }
 
   const filteredVehicles = useMemo(
     () =>
@@ -71,6 +133,18 @@ export default function VehiclesPage() {
         return matchesSearch && matchesStatus;
       }),
     [search, statusFilter, vehicles],
+  );
+
+  const filteredReportRows = useMemo(
+    () =>
+      reportRows.filter((row) => {
+        if (reportVehicleFilter === "") {
+          return true;
+        }
+
+        return String(row.vehicleId) === reportVehicleFilter;
+      }),
+    [reportRows, reportVehicleFilter],
   );
 
   async function handleSubmit(event: React.FormEvent) {
@@ -152,6 +226,92 @@ export default function VehiclesPage() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          <div className="card mt-6">
+            <div className="card-header">
+              <h2>Vehicle Utilization Report</h2>
+            </div>
+            <div className="card-body">
+              <div className="form-row mb-4">
+                <div className="form-group">
+                  <label className="form-label">Start Date</label>
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={reportStartDate}
+                    onChange={(event) => setReportStartDate(event.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">End Date</label>
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={reportEndDate}
+                    onChange={(event) => setReportEndDate(event.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="form-row mb-4">
+                <div className="form-group">
+                  <label className="form-label">Vehicle</label>
+                  <select
+                    className="form-select"
+                    value={reportVehicleFilter}
+                    onChange={(event) => setReportVehicleFilter(event.target.value)}
+                  >
+                    <option value="">All Vehicles</option>
+                    {vehicles.map((vehicle) => (
+                      <option key={vehicle.vehicleId} value={String(vehicle.vehicleId)}>
+                        #{vehicle.vehicleId} - {vehicle.plateNumber}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-row mb-4">
+                <button type="button" className="btn btn-primary" onClick={() => void applyReportFilters()} disabled={reportLoading}>
+                  Apply Report Filters
+                </button>
+                <button type="button" className="btn" onClick={() => void clearReportFilters()} disabled={reportLoading}>
+                  Clear Filters
+                </button>
+              </div>
+              {reportError ? <div className="alert alert-error">{reportError}</div> : null}
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Vehicle ID</th>
+                      <th>Trips Count</th>
+                      <th>Kilometers Driven</th>
+                      <th>Idle Time (min)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reportLoading ? (
+                      <tr>
+                        <td colSpan={4}>Loading report...</td>
+                      </tr>
+                    ) : filteredReportRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={4}>No report data available.</td>
+                      </tr>
+                    ) : (
+                      filteredReportRows.map((row) => (
+                        <tr key={row.vehicleId}>
+                          <td>#{row.vehicleId}</td>
+                          <td>{row.tripsCount}</td>
+                          <td>{row.kilometersDriven.toFixed(2)}</td>
+                          <td>{row.idleTimeMinutes.toFixed(0)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
 
