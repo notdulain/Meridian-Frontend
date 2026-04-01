@@ -6,6 +6,7 @@ import { useAuthStore } from "@/store/authStore";
 import { assignmentService } from "@/src/services/assignmentService";
 import { driverService, type DriverProfile } from "@/src/services/driverService";
 import { useLiveGeolocation } from "@/src/hooks/useLiveGeolocation";
+import { DriverLiveMap } from "@/components/DriverLiveMap";
 
 interface ActiveAssignment {
     assignmentId: number;
@@ -15,16 +16,16 @@ interface ActiveAssignment {
 
 export default function DriverDashboardPage() {
     const { user } = useAuthStore();
-    
+
     const [driverProfile, setDriverProfile] = useState<DriverProfile | null>(null);
     const [activeAssignment, setActiveAssignment] = useState<ActiveAssignment | null>(null);
     const [loading, setLoading] = useState(true);
     const [trackingEnabled, setTrackingEnabled] = useState(false);
 
-    // Fetch driver's active assignment
+    // Fetch driver's active assignment on mount
     useEffect(() => {
         let isMounted = true;
-        
+
         async function fetchAssignment() {
             try {
                 const profile = await driverService.me();
@@ -41,18 +42,16 @@ export default function DriverDashboardPage() {
                 const assignment = await assignmentService.getActiveForDriver(profile.driverId) as ActiveAssignment | null;
                 if (!isMounted) return;
 
-                if (isMounted) {
-                    setActiveAssignment(assignment);
-                    // Automatically enable tracking if an active assignment exists
-                    setTrackingEnabled(Boolean(assignment));
-                }
+                setActiveAssignment(assignment);
+                // Automatically enable tracking when an active assignment exists
+                setTrackingEnabled(Boolean(assignment));
             } catch (err) {
                 console.error("Failed to load active assignment", err);
             } finally {
                 if (isMounted) setLoading(false);
             }
         }
-        
+
         void fetchAssignment();
 
         return () => {
@@ -61,8 +60,8 @@ export default function DriverDashboardPage() {
         };
     }, []);
 
-    // Initialize GPS tracking (MER-83)
-    const { error: gpsError, lastSent } = useLiveGeolocation({
+    // GPS tracking hook — now also returns the live position for the map
+    const { error: gpsError, lastSent, position } = useLiveGeolocation({
         assignmentId: activeAssignment?.assignmentId,
         driverId: driverProfile?.driverId,
         enabled: trackingEnabled,
@@ -78,8 +77,8 @@ export default function DriverDashboardPage() {
                     </div>
                     {activeAssignment && (
                         <div>
-                            <button 
-                                className={`btn ${trackingEnabled ? 'btn-danger' : 'btn-success'}`}
+                            <button
+                                className={`btn ${trackingEnabled ? "btn-danger" : "btn-success"}`}
                                 onClick={() => setTrackingEnabled(!trackingEnabled)}
                             >
                                 {trackingEnabled ? "Pause Tracking" : "Resume Tracking"}
@@ -101,6 +100,7 @@ export default function DriverDashboardPage() {
                     </div>
                 ) : (
                     <>
+                        {/* Assignment status card */}
                         <div className="card" style={{ marginBottom: "24px", borderLeft: "4px solid var(--color-success)" }}>
                             <div className="card-body">
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -113,7 +113,9 @@ export default function DriverDashboardPage() {
                                         </p>
                                     </div>
                                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-                                        <span className="badge badge-success" style={{ fontSize: "14px", padding: "6px 12px", marginBottom: "8px" }}>In Transit</span>
+                                        <span className="badge badge-success" style={{ fontSize: "14px", padding: "6px 12px", marginBottom: "8px" }}>
+                                            In Transit
+                                        </span>
                                         {lastSent && (
                                             <span style={{ fontSize: "11px", color: "var(--color-text-muted)" }}>
                                                 Last GPS sync: {lastSent.toLocaleTimeString()}
@@ -124,12 +126,14 @@ export default function DriverDashboardPage() {
                             </div>
                         </div>
 
+                        {/* GPS error banner */}
                         {gpsError && (
                             <div className="alert alert-error" style={{ marginBottom: "24px" }}>
                                 <strong>GPS Error:</strong> {gpsError}
                             </div>
                         )}
 
+                        {/* Quick-stat cards */}
                         <div className="stats-grid">
                             <div className="stat-card">
                                 <p className="stat-label">GPS Tracking</p>
@@ -147,12 +151,29 @@ export default function DriverDashboardPage() {
                             </div>
                         </div>
 
+                        {/* Live position map */}
                         <div className="card" style={{ marginTop: "24px" }}>
                             <div className="card-header">
-                                <h2>Route Map Update</h2>
+                                <h2>Live Position</h2>
                             </div>
-                            <div className="card-body" style={{ height: "300px", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.2)" }}>
-                                <p style={{ color: "var(--color-text-muted)" }}>[Live Map View active during transit]</p>
+                            <div className="card-body" style={{ padding: 0, height: "360px", borderRadius: "0 0 8px 8px", overflow: "hidden" }}>
+                                {trackingEnabled || position ? (
+                                    <DriverLiveMap position={position} />
+                                ) : (
+                                    <div style={{
+                                        height: "100%",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        background: "rgba(0,0,0,0.2)",
+                                        color: "var(--color-text-muted)",
+                                        flexDirection: "column",
+                                        gap: "8px",
+                                    }}>
+                                        <span style={{ fontSize: "24px" }}>📍</span>
+                                        <span>GPS tracking is paused. Resume to see live position.</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </>
