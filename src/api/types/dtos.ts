@@ -115,10 +115,13 @@ export interface RouteOptionDto {
 }
 
 export interface TrackingLocationDto {
-  driverId: string;
+  locationUpdateId?: number;
+  assignmentId: number;
+  driverId: number;
   latitude: number;
   longitude: number;
   timestamp?: string;
+  speedKmh?: number | null;
 }
 
 export interface HealthDto {

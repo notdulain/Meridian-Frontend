@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { trackingService, type LocationPayload } from "@/src/services/trackingService";
+import { trackingService, type LocationPayload } from "@/src/api/services/trackingService";
 
 export interface UseLiveGeolocationProps {
   assignmentId?: number | null;
@@ -7,10 +7,16 @@ export interface UseLiveGeolocationProps {
   enabled: boolean;
 }
 
+export interface GeoPosition {
+  lat: number;
+  lng: number;
+}
+
 export function useLiveGeolocation({ assignmentId, driverId, enabled }: UseLiveGeolocationProps) {
   const [error, setError] = useState<string | null>(null);
   const [lastSent, setLastSent] = useState<Date | null>(null);
-  
+  const [position, setPosition] = useState<GeoPosition | null>(null);
+
   const watchIdRef = useRef<number | null>(null);
   const lastUpdateRef = useRef<number>(0);
   const lastPositionRef = useRef<GeolocationPosition | null>(null);
@@ -35,12 +41,15 @@ export function useLiveGeolocation({ assignmentId, driverId, enabled }: UseLiveG
       return;
     }
 
-    const sendLocation = (position: GeolocationPosition) => {
-      const { latitude, longitude, speed } = position.coords;
+    const sendLocation = (pos: GeolocationPosition) => {
+      const { latitude, longitude, speed } = pos.coords;
       const now = Date.now();
-      // Prevent spamming the API: Max 1 update every 5 seconds
+      // Prevent spamming the API: max 1 update every 5 seconds
       if (now - lastUpdateRef.current < 5000) return;
       lastUpdateRef.current = now;
+
+      // Update the live position state so the driver map can render it
+      setPosition({ lat: latitude, lng: longitude });
 
       const payload: LocationPayload = {
         assignmentId,
@@ -50,7 +59,8 @@ export function useLiveGeolocation({ assignmentId, driverId, enabled }: UseLiveG
         speedKmh: speed !== null ? speed * 3.6 : null,
       };
 
-      trackingService.postLocation(payload)
+      trackingService
+        .postLocation(payload)
         .then(() => setLastSent(new Date()))
         .catch((err) => {
           console.error("Failed to post location update:", err);
@@ -59,11 +69,11 @@ export function useLiveGeolocation({ assignmentId, driverId, enabled }: UseLiveG
     };
 
     watchIdRef.current = navigator.geolocation.watchPosition(
-      (position) => {
-        lastPositionRef.current = position;
-        sendLocation(position);
+      (pos) => {
+        lastPositionRef.current = pos;
+        sendLocation(pos);
       },
-      (geoError) => {
+      () => {
         setError("Unable to retrieve your location. Please check your GPS permissions.");
       },
       {
@@ -73,7 +83,7 @@ export function useLiveGeolocation({ assignmentId, driverId, enabled }: UseLiveG
       }
     );
 
-    // Explicitly ping the server every 5 seconds with the last known position
+    // Ping the server every 5 seconds with the last known position when stationary
     intervalRef.current = setInterval(() => {
       if (lastPositionRef.current) {
         sendLocation(lastPositionRef.current);
@@ -92,5 +102,5 @@ export function useLiveGeolocation({ assignmentId, driverId, enabled }: UseLiveG
     };
   }, [enabled, assignmentId, driverId]);
 
-  return { error, lastSent };
+  return { error, lastSent, position };
 }
