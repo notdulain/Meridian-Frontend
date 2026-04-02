@@ -157,3 +157,23 @@ export interface RouteQuery {
   destination: string;
   [key: string]: string | number | boolean | null | undefined;
 }
+
+export type TrendRange = "daily" | "weekly" | "monthly";
+
+export interface DeliveryTrendPointDto {
+  period: string;
+  total: number;
+  pending: number;
+  assigned: number;
+  inTransit: number;
+  delivered: number;
+  failed: number;
+  canceled: number;
+}
+
+export interface DeliveryTrendQuery {
+  range?: TrendRange;
+  from?: string;
+  to?: string;
+  [key: string]: string | number | boolean | null | undefined;
+}
