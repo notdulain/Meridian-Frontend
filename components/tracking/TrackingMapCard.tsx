@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Activity, MapPinned, Radio } from "lucide-react";
+import { MapPinned } from "lucide-react";
 import { LiveTrackingMap } from "@/components/LiveTrackingMap";
 import { PREFERENCE_KEYS, getBooleanPreference } from "@/src/lib/preferences";
 

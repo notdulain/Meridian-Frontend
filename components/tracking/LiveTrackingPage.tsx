@@ -56,16 +56,18 @@ export function LiveTrackingPage() {
     const loadAssignments = async () => {
       try {
         // We fetch active assignments to know which Dispatcher SignalR tracking groups to join
-        const res = await apiClient.get<any>("/assignment/api/assignments?pageSize=100");
+        const res = await apiClient.get<{ success?: boolean; data?: any[] }>("/assignment/api/assignments?pageSize=100");
         if (!isMounted) return;
 
         if (res.data?.success && Array.isArray(res.data.data)) {
           const activeIds = res.data.data
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             .filter((a: any) => a.status === 'Active')
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             .map((a: any) => a.assignmentId);
           setActiveAssignmentIds(activeIds);
         }
-      } catch (e) {
+      } catch (_e) {
         console.warn("Failed to load assignments, map will stay idle until assignments are manually provided or retry successful.");
       }
     };
