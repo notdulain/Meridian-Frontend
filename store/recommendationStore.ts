@@ -99,7 +99,7 @@ export const useRecommendationStore = create<RecommendationState>((set) => ({
         loading: false,
         error: null,
       });
-    } catch (error) {
+    } catch (_error) {
       console.warn("Failed to load vehicle recommendations");
       set({
         recommendations: buildMockRecommendations(deliveryId),
