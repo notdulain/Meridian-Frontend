@@ -54,6 +54,8 @@ export const API = {
 
   reports: {
     driverPerformance: "GET /driver/api/reports/driver-performance?startDateUtc&endDateUtc",
+    vehicleUtilization: "GET /vehicle/api/reports/vehicle-utilization?startDateUtc&endDateUtc",
+    deliveryTrends: "GET /delivery/api/reports/delivery-trends?range&from&to",
   },
 
   assignments: {
@@ -82,6 +84,10 @@ export const API = {
     assignmentHistory: "GET /tracking/api/tracking/assignment/:assignmentId/history",
     driverLastKnown: "GET /tracking/api/tracking/driver/:driverId/last-known",
     hub: "WS /hubs/tracking",
+  },
+
+  dashboard: {
+    summary: "GET /api/dashboard/summary",
   },
 
   gatewayHealth: {
