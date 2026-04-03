@@ -71,6 +71,13 @@ export interface DeliverySuccessReportDto {
   successRatePercentage: number;
 }
 
+export interface VehicleUtilizationReportRowDto {
+  vehicleId: number;
+  tripsCount: number;
+  kilometersDriven: number;
+  idleTimeMinutes: number;
+}
+
 export interface AssignmentDto {
   id: string;
   deliveryId?: string;
@@ -145,6 +152,12 @@ export interface DeliverySuccessReportQuery {
   [key: string]: string | number | boolean | null | undefined;
 }
 
+export interface VehicleUtilizationReportQuery {
+  startDateUtc?: string;
+  endDateUtc?: string;
+  [key: string]: string | number | boolean | null | undefined;
+}
+
 export interface AssignmentHistoryQuery {
   fromDate?: string;
   toDate?: string;
@@ -156,5 +169,25 @@ export interface AssignmentHistoryQuery {
 export interface RouteQuery {
   origin: string;
   destination: string;
+  [key: string]: string | number | boolean | null | undefined;
+}
+
+export type TrendRange = "daily" | "weekly" | "monthly";
+
+export interface DeliveryTrendPointDto {
+  period: string;
+  total: number;
+  pending: number;
+  assigned: number;
+  inTransit: number;
+  delivered: number;
+  failed: number;
+  canceled: number;
+}
+
+export interface DeliveryTrendQuery {
+  range?: TrendRange;
+  from?: string;
+  to?: string;
   [key: string]: string | number | boolean | null | undefined;
 }

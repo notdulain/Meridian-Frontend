@@ -195,9 +195,14 @@ export default function DeliveriesPage() {
                     <h1>Deliveries</h1>
                     <p>Manage and track all delivery requests</p>
                 </div>
-                <Link href="/deliveries/create" className="btn btn-primary">
-                    + New Delivery
-                </Link>
+                <div style={{ display: "flex", gap: "10px" }}>
+                    <Link href="/deliveries/trends" className="btn btn-secondary">
+                        View Trends →
+                    </Link>
+                    <Link href="/deliveries/create" className="btn btn-primary">
+                        + New Delivery
+                    </Link>
+                </div>
             </div>
 
             {error && (
