@@ -97,10 +97,19 @@ export function VehicleRecommendations({ deliveryId }: VehicleRecommendationsPro
           {recommendations.map((recommendation, index) => {
             const badges = getReasonBadges(recommendation.reason);
             const isTopRecommendation = index === 0;
+            const vehicleLabel = recommendation.plateNumber?.trim() || `Vehicle ${recommendation.vehicleId}`;
+            const vehicleDetails =
+              [recommendation.make, recommendation.model].filter(Boolean).join(" ")
+              || recommendation.currentLocation?.trim()
+              || "Vehicle details unavailable";
+            const distanceText =
+              typeof recommendation.distanceToPickupKm === "number"
+                ? `${recommendation.distanceToPickupKm.toFixed(1)} km to pickup`
+                : "Distance unavailable";
 
             return (
               <article
-                key={`${recommendation.vehicleId}-${recommendation.driverName}`}
+                key={`${recommendation.vehicleId}-${index}`}
                 className={[
                   "rounded-2xl border bg-white p-4 shadow-sm transition-colors",
                   isTopRecommendation
@@ -112,7 +121,7 @@ export function VehicleRecommendations({ deliveryId }: VehicleRecommendationsPro
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-base font-semibold text-slate-900">
-                        Vehicle {recommendation.vehicleId}
+                        {vehicleLabel}
                       </h3>
                       {isTopRecommendation ? (
                         <span className="rounded-full bg-emerald-600 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
@@ -120,7 +129,7 @@ export function VehicleRecommendations({ deliveryId }: VehicleRecommendationsPro
                         </span>
                       ) : null}
                     </div>
-                    <p className="mt-1 text-sm text-slate-500">{recommendation.driverName}</p>
+                    <p className="mt-1 text-sm text-slate-500">{vehicleDetails}</p>
                   </div>
 
                   <div className="rounded-xl bg-slate-900 px-3 py-2 text-right text-white">
@@ -133,19 +142,19 @@ export function VehicleRecommendations({ deliveryId }: VehicleRecommendationsPro
                   <div className="rounded-xl bg-slate-50 p-3">
                     <div className="text-xs uppercase tracking-wide text-slate-400">Distance</div>
                     <div className="mt-1 text-sm font-medium text-slate-800">
-                      {recommendation.distanceKm.toFixed(1)} km to pickup
+                      {distanceText}
                     </div>
                   </div>
                   <div className="rounded-xl bg-slate-50 p-3">
-                    <div className="text-xs uppercase tracking-wide text-slate-400">ETA</div>
+                    <div className="text-xs uppercase tracking-wide text-slate-400">Current Area</div>
                     <div className="mt-1 text-sm font-medium text-slate-800">
-                      {recommendation.etaMinutes} min arrival
+                      {recommendation.currentLocation?.trim() || "Unavailable"}
                     </div>
                   </div>
                   <div className="rounded-xl bg-slate-50 p-3">
-                    <div className="text-xs uppercase tracking-wide text-slate-400">Fuel Cost</div>
+                    <div className="text-xs uppercase tracking-wide text-slate-400">Vehicle ID</div>
                     <div className="mt-1 text-sm font-medium text-slate-800">
-                      LKR {recommendation.fuelCost.toFixed(2)}
+                      #{recommendation.vehicleId}
                     </div>
                   </div>
                   <div className="rounded-xl bg-slate-50 p-3">
@@ -174,4 +183,3 @@ export function VehicleRecommendations({ deliveryId }: VehicleRecommendationsPro
     </section>
   );
 }
-
