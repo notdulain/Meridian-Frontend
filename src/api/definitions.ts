@@ -56,6 +56,7 @@ export const API = {
     driverPerformance: "GET /driver/api/reports/driver-performance?startDateUtc&endDateUtc",
     deliverySuccess: "GET /delivery/api/reports/delivery-success?startDateUtc&endDateUtc",
     vehicleUtilization: "GET /vehicle/api/reports/vehicle-utilization?startDateUtc&endDateUtc",
+    fuelCost: "GET /route/api/reports/fuel-cost",
     deliveryTrends: "GET /delivery/api/reports/delivery-trends?range&from&to",
   },
 

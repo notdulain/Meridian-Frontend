@@ -115,6 +115,16 @@ export interface VehicleUtilizationReportRowDto {
   idleTimeMinutes: number;
 }
 
+export interface FuelCostReportRowDto {
+  vehicleId: number;
+  driverId: number;
+  periodStartUtc: string;
+  tripCount: number;
+  totalDistanceKm: number;
+  totalFuelConsumptionLitres: number;
+  totalFuelCostLkr: number;
+}
+
 export interface AssignmentDto {
   id: string;
   deliveryId?: string;
