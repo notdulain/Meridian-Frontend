@@ -682,6 +682,23 @@ tbody tr:hover { background: rgba(255, 255, 255, 0.05); }
   gap: 10px;
 }
 
+.delivery-success-filter {
+  margin-bottom: 16px;
+}
+
+.delivery-success-filter-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.delivery-success-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
 .delivery-success-row {
   display: flex;
   align-items: center;
@@ -734,5 +751,9 @@ tbody tr:hover { background: rgba(255, 255, 255, 0.05); }
   .metric-summary-actions {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .delivery-success-filter-row {
+    grid-template-columns: 1fr;
   }
 }
