@@ -139,6 +139,22 @@ export interface AssignmentDto {
   [key: string]: unknown;
 }
 
+export interface AssignmentHistoryRowDto {
+  assignmentHistoryId?: number;
+  assignmentId?: number;
+  deliveryId?: number;
+  vehicleId?: number;
+  driverId?: number;
+  previousStatus?: string | null;
+  newStatus?: string;
+  action?: string;
+  changedBy?: string;
+  changedAt?: string;
+  assignedAt?: string;
+  createdAt?: string;
+  [key: string]: unknown;
+}
+
 export interface RouteOptionDto {
   id: string;
   origin?: string;
