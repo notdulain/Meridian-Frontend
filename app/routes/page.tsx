@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { assignmentService } from "@/src/api/services/assignmentService";
 import { reportService } from "@/src/api/services/reportService";
-import type { FuelCostReportQuery, FuelCostReportRowDto } from "@/src/api/types/dtos";
+import type { AssignmentHistoryRowDto, FuelCostReportQuery, FuelCostReportRowDto } from "@/src/api/types/dtos";
 
 export default function RoutesPage() {
     const [rows, setRows] = useState<FuelCostReportRowDto[]>([]);
@@ -11,24 +12,69 @@ export default function RoutesPage() {
     const [reportVehicleFilter, setReportVehicleFilter] = useState("");
     const [reportStartDate, setReportStartDate] = useState("");
     const [reportEndDate, setReportEndDate] = useState("");
+    const [assignmentHistoryRows, setAssignmentHistoryRows] = useState<AssignmentHistoryRowDto[]>([]);
+    const [crossRefLoading, setCrossRefLoading] = useState(false);
+    const [crossRefError, setCrossRefError] = useState("");
 
-    async function loadFuelCostReport(query?: FuelCostReportQuery) {
+    function toDateKey(value: string): string {
+        return new Date(value).toISOString().slice(0, 10);
+    }
+
+    const loadAssignmentCrossReference = useCallback(async (fuelRows: FuelCostReportRowDto[], query?: FuelCostReportQuery) => {
+        if (fuelRows.length === 0) {
+            setAssignmentHistoryRows([]);
+            setCrossRefError("");
+            return;
+        }
+
+        setCrossRefLoading(true);
+        setCrossRefError("");
+
+        try {
+            const timestamps = fuelRows.map((row) => new Date(row.periodStartUtc).getTime());
+            const minTimestamp = Math.min(...timestamps);
+            const maxTimestamp = Math.max(...timestamps);
+
+            const minDate = new Date(minTimestamp);
+            const maxDate = new Date(maxTimestamp);
+            const maxDateExclusive = new Date(Date.UTC(maxDate.getUTCFullYear(), maxDate.getUTCMonth(), maxDate.getUTCDate() + 1));
+
+            const historyRows = await assignmentService.history({
+                fromDate: query?.startDateUtc ?? minDate.toISOString(),
+                toDate: query?.endDateUtc ?? maxDateExclusive.toISOString(),
+                page: 1,
+                pageSize: 1000,
+            });
+
+            setAssignmentHistoryRows(Array.isArray(historyRows) ? historyRows : []);
+        } catch {
+            setAssignmentHistoryRows([]);
+            setCrossRefError("Unable to cross-reference assignment data.");
+        } finally {
+            setCrossRefLoading(false);
+        }
+    }, []);
+
+    const loadFuelCostReport = useCallback(async (query?: FuelCostReportQuery) => {
         setLoading(true);
         setError("");
 
         try {
             const response = await reportService.fuelCost(query);
-            setRows(Array.isArray(response) ? response : []);
+            const fuelRows = Array.isArray(response) ? response : [];
+            setRows(fuelRows);
+            await loadAssignmentCrossReference(fuelRows, query);
         } catch {
             setError("Unable to load fuel cost report.");
+            setAssignmentHistoryRows([]);
         } finally {
             setLoading(false);
         }
-    }
+    }, [loadAssignmentCrossReference]);
 
     useEffect(() => {
         void loadFuelCostReport();
-    }, []);
+    }, [loadFuelCostReport]);
 
     const vehicleOptions = useMemo(() => {
         const seen = new Set<number>();
@@ -89,6 +135,41 @@ export default function RoutesPage() {
         () => rows.reduce((sum, row) => sum + row.totalFuelCostLkr, 0),
         [rows],
     );
+
+    const assignmentMatchCountByKey = useMemo(() => {
+        const keyToAssignments = new Map<string, Set<number>>();
+
+        for (const row of assignmentHistoryRows) {
+            const vehicleId = row.vehicleId;
+            const driverId = row.driverId;
+            const timestamp = row.changedAt ?? row.assignedAt ?? row.createdAt;
+            const action = row.action?.toLowerCase();
+
+            if (typeof vehicleId !== "number" || typeof driverId !== "number" || !timestamp) {
+                continue;
+            }
+
+            if (action && action !== "created") {
+                continue;
+            }
+
+            const dateKey = toDateKey(timestamp);
+            const key = `${vehicleId}-${driverId}-${dateKey}`;
+            const assignmentIdentity = typeof row.assignmentId === "number"
+                ? row.assignmentId
+                : Number(`${vehicleId}${driverId}${new Date(timestamp).getTime()}`);
+
+            if (!keyToAssignments.has(key)) {
+                keyToAssignments.set(key, new Set<number>());
+            }
+
+            keyToAssignments.get(key)?.add(assignmentIdentity);
+        }
+
+        return new Map<string, number>(
+            Array.from(keyToAssignments.entries()).map(([key, ids]) => [key, ids.size]),
+        );
+    }, [assignmentHistoryRows]);
 
     return (
         <div className="page-container">
@@ -159,6 +240,8 @@ export default function RoutesPage() {
                         </button>
                     </div>
 
+                    {crossRefError ? <div className="alert alert-warning">{crossRefError}</div> : null}
+
                     <div className="stats-grid" style={{ marginBottom: 16 }}>
                         <div className="stat-card">
                             <p className="stat-label">Total Fuel Cost</p>
@@ -180,16 +263,17 @@ export default function RoutesPage() {
                                     <th>Distance (km)</th>
                                     <th>Fuel (L)</th>
                                     <th>Total Cost (LKR)</th>
+                                    <th>Assignments</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={7}>Loading fuel cost data...</td>
+                                        <td colSpan={8}>Loading fuel cost data...</td>
                                     </tr>
                                 ) : rows.length === 0 ? (
                                     <tr>
-                                        <td colSpan={7}>No fuel cost data available.</td>
+                                        <td colSpan={8}>No fuel cost data available.</td>
                                     </tr>
                                 ) : (
                                     rows.map((row, index) => (
@@ -201,6 +285,11 @@ export default function RoutesPage() {
                                             <td>{row.totalDistanceKm.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                             <td>{row.totalFuelConsumptionLitres.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                             <td>LKR {row.totalFuelCostLkr.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                            <td>
+                                                {crossRefLoading
+                                                    ? "..."
+                                                    : (assignmentMatchCountByKey.get(`${row.vehicleId}-${row.driverId}-${toDateKey(row.periodStartUtc)}`) ?? 0)}
+                                            </td>
                                         </tr>
                                     ))
                                 )}
