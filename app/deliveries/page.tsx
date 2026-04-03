@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/api/client";
 import type { DeliveryDto, DeliveryStatus } from "@/lib/types";
+import { reportService } from "@/src/api/services/reportService";
+import type { DeliverySuccessReportDto } from "@/src/api/types/dtos";
 
 const STATUS_BADGE: Record<DeliveryStatus, string> = {
     Pending:   "badge badge-pending",
@@ -25,8 +27,11 @@ function formatDeadline(iso: string) {
 export default function DeliveriesPage() {
     const searchParams = useSearchParams();
     const [deliveries, setDeliveries] = useState<DeliveryDto[]>([]);
+    const [deliverySuccessReport, setDeliverySuccessReport] = useState<DeliverySuccessReportDto | null>(null);
     const [loading, setLoading] = useState(true);
+    const [reportLoading, setReportLoading] = useState(true);
     const [error, setError] = useState("");
+    const [reportError, setReportError] = useState("");
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<DeliveryStatus | "">("");
     const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -34,6 +39,20 @@ export default function DeliveriesPage() {
         const deleted = searchParams.get("deleted");
         return deleted ? `Delivery #${deleted} was successfully deleted.` : "";
     });
+
+    async function loadDeliverySuccessReport() {
+        setReportLoading(true);
+        setReportError("");
+
+        try {
+            const report = await reportService.deliverySuccess();
+            setDeliverySuccessReport(report);
+        } catch {
+            setReportError("Failed to load delivery success summary.");
+        } finally {
+            setReportLoading(false);
+        }
+    }
 
     async function handleDelete(id: number) {
         if (!confirm(`Are you sure you want to delete delivery #${id}? This action cannot be undone.`)) return;
@@ -51,6 +70,7 @@ export default function DeliveriesPage() {
     }
 
     useEffect(() => {
+        void loadDeliverySuccessReport();
         apiClient
             .get<DeliveryDto[]>("/delivery/api/deliveries")
             .then(setDeliveries)
@@ -59,6 +79,11 @@ export default function DeliveriesPage() {
             )
             .finally(() => setLoading(false));
     }, []);
+
+            const terminalCount = deliverySuccessReport?.terminalCount ?? 0;
+            const deliveredShare = terminalCount > 0 ? (deliverySuccessReport!.deliveredCount / terminalCount) * 100 : 0;
+            const failedShare = terminalCount > 0 ? (deliverySuccessReport!.failedCount / terminalCount) * 100 : 0;
+            const cancelledShare = terminalCount > 0 ? (deliverySuccessReport!.cancelledCount / terminalCount) * 100 : 0;
 
     const filtered = deliveries.filter((d) => {
         const matchesSearch =
@@ -130,6 +155,78 @@ export default function DeliveriesPage() {
                     <option value="Failed">Failed</option>
                     <option value="Canceled">Canceled</option>
                 </select>
+            </div>
+
+            <div className="card" style={{ marginBottom: 16 }}>
+                <div className="card-header metric-summary-header">
+                    <div>
+                        <h2>Delivery Success Summary</h2>
+                        <p className="metric-summary-caption">Delivered vs Failed vs Cancelled</p>
+                    </div>
+                    <div className="metric-summary-actions">
+                        <button type="button" className="btn btn-secondary" onClick={() => void loadDeliverySuccessReport()} disabled={reportLoading}>
+                            {reportLoading ? "Refreshing..." : "Refresh"}
+                        </button>
+                    </div>
+                </div>
+                <div className="card-body">
+                    {reportError ? <div className="alert alert-warning">{reportError}</div> : null}
+
+                    <div className="stats-grid" style={{ marginBottom: 16 }}>
+                        <div className="stat-card">
+                            <p className="stat-label">Success Rate</p>
+                            <p className="stat-value">
+                                {reportLoading && !deliverySuccessReport
+                                    ? "--"
+                                    : `${(deliverySuccessReport?.successRatePercentage ?? 0).toFixed(2)}%`}
+                            </p>
+                            <p className="stat-sub">Delivered / Terminal Deliveries</p>
+                        </div>
+                        <div className="stat-card">
+                            <p className="stat-label">Terminal Deliveries</p>
+                            <p className="stat-value">{reportLoading && !deliverySuccessReport ? "--" : terminalCount}</p>
+                            <p className="stat-sub">Delivered + Failed + Cancelled</p>
+                        </div>
+                    </div>
+
+                    <div className="delivery-success-breakdown">
+                        <div className="delivery-success-row">
+                            <div className="delivery-success-label">Delivered</div>
+                            <div className="delivery-success-value">
+                                {reportLoading && !deliverySuccessReport
+                                    ? "--"
+                                    : `${deliverySuccessReport?.deliveredCount ?? 0} (${deliveredShare.toFixed(1)}%)`}
+                            </div>
+                        </div>
+                        <div className="delivery-success-track">
+                            <div className="delivery-success-fill delivery-success-fill-delivered" style={{ width: `${deliveredShare}%` }} />
+                        </div>
+
+                        <div className="delivery-success-row">
+                            <div className="delivery-success-label">Failed</div>
+                            <div className="delivery-success-value">
+                                {reportLoading && !deliverySuccessReport
+                                    ? "--"
+                                    : `${deliverySuccessReport?.failedCount ?? 0} (${failedShare.toFixed(1)}%)`}
+                            </div>
+                        </div>
+                        <div className="delivery-success-track">
+                            <div className="delivery-success-fill delivery-success-fill-failed" style={{ width: `${failedShare}%` }} />
+                        </div>
+
+                        <div className="delivery-success-row">
+                            <div className="delivery-success-label">Cancelled</div>
+                            <div className="delivery-success-value">
+                                {reportLoading && !deliverySuccessReport
+                                    ? "--"
+                                    : `${deliverySuccessReport?.cancelledCount ?? 0} (${cancelledShare.toFixed(1)}%)`}
+                            </div>
+                        </div>
+                        <div className="delivery-success-track">
+                            <div className="delivery-success-fill delivery-success-fill-cancelled" style={{ width: `${cancelledShare}%` }} />
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div className="table-container">
