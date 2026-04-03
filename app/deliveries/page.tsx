@@ -6,7 +6,18 @@ import { useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/api/client";
 import type { DeliveryDto, DeliveryStatus } from "@/lib/types";
 import { reportService } from "@/src/api/services/reportService";
-import type { DeliverySuccessReportDto } from "@/src/api/types/dtos";
+import type { DeliverySuccessReportDto, DeliverySuccessReportQuery } from "@/src/api/types/dtos";
+
+type ReportTimePeriod = "all" | "today" | "last7Days" | "last30Days" | "last90Days" | "custom";
+
+const REPORT_TIME_PERIOD_LABEL: Record<ReportTimePeriod, string> = {
+    all: "All Time",
+    today: "Today",
+    last7Days: "Last 7 Days",
+    last30Days: "Last 30 Days",
+    last90Days: "Last 90 Days",
+    custom: "Custom Range",
+};
 
 const STATUS_BADGE: Record<DeliveryStatus, string> = {
     Pending:   "badge badge-pending",
@@ -28,6 +39,9 @@ export default function DeliveriesPage() {
     const searchParams = useSearchParams();
     const [deliveries, setDeliveries] = useState<DeliveryDto[]>([]);
     const [deliverySuccessReport, setDeliverySuccessReport] = useState<DeliverySuccessReportDto | null>(null);
+    const [reportPeriod, setReportPeriod] = useState<ReportTimePeriod>("all");
+    const [customReportStartDate, setCustomReportStartDate] = useState("");
+    const [customReportEndDate, setCustomReportEndDate] = useState("");
     const [loading, setLoading] = useState(true);
     const [reportLoading, setReportLoading] = useState(true);
     const [error, setError] = useState("");
@@ -40,18 +54,91 @@ export default function DeliveriesPage() {
         return deleted ? `Delivery #${deleted} was successfully deleted.` : "";
     });
 
-    async function loadDeliverySuccessReport() {
+    async function loadDeliverySuccessReport(query?: DeliverySuccessReportQuery) {
         setReportLoading(true);
         setReportError("");
 
         try {
-            const report = await reportService.deliverySuccess();
+            const report = await reportService.deliverySuccess(query);
             setDeliverySuccessReport(report);
         } catch {
             setReportError("Failed to load delivery success summary.");
         } finally {
             setReportLoading(false);
         }
+    }
+
+    function toUtcDayBounds(dateInput: string) {
+        const start = new Date(`${dateInput}T00:00:00.000Z`);
+        const end = new Date(start);
+        end.setUTCDate(end.getUTCDate() + 1);
+        return { start, end };
+    }
+
+    function buildReportQueryByPeriod(): DeliverySuccessReportQuery | null {
+        if (reportPeriod === "all") {
+            return {};
+        }
+
+        if (reportPeriod === "custom") {
+            if (customReportStartDate && customReportEndDate && customReportEndDate < customReportStartDate) {
+                setReportError("End date must be greater than or equal to start date.");
+                return null;
+            }
+
+            const query: DeliverySuccessReportQuery = {};
+
+            if (customReportStartDate) {
+                const start = toUtcDayBounds(customReportStartDate);
+                query.startDateUtc = start.start.toISOString();
+            }
+
+            if (customReportEndDate) {
+                const end = toUtcDayBounds(customReportEndDate);
+                query.endDateUtc = end.end.toISOString();
+            }
+
+            return query;
+        }
+
+        const today = new Date();
+        today.setUTCHours(0, 0, 0, 0);
+
+        const start = new Date(today);
+        const end = new Date(today);
+        end.setUTCDate(end.getUTCDate() + 1);
+
+        if (reportPeriod === "last7Days") {
+            start.setUTCDate(start.getUTCDate() - 6);
+        } else if (reportPeriod === "last30Days") {
+            start.setUTCDate(start.getUTCDate() - 29);
+        } else if (reportPeriod === "last90Days") {
+            start.setUTCDate(start.getUTCDate() - 89);
+        }
+
+        return {
+            startDateUtc: start.toISOString(),
+            endDateUtc: end.toISOString(),
+        };
+    }
+
+    async function applyReportPeriodFilter() {
+        const query = buildReportQueryByPeriod();
+        if (query === null) return;
+
+        if (Object.keys(query).length === 0) {
+            await loadDeliverySuccessReport();
+            return;
+        }
+
+        await loadDeliverySuccessReport(query);
+    }
+
+    async function clearReportPeriodFilter() {
+        setReportPeriod("all");
+        setCustomReportStartDate("");
+        setCustomReportEndDate("");
+        await loadDeliverySuccessReport();
     }
 
     async function handleDelete(id: number) {
@@ -80,10 +167,14 @@ export default function DeliveriesPage() {
             .finally(() => setLoading(false));
     }, []);
 
+            const deliveredCount = deliverySuccessReport?.deliveredCount ?? 0;
+            const failedCount = deliverySuccessReport?.failedCount ?? 0;
+            const cancelledCount = deliverySuccessReport?.cancelledCount ?? 0;
             const terminalCount = deliverySuccessReport?.terminalCount ?? 0;
-            const deliveredShare = terminalCount > 0 ? (deliverySuccessReport!.deliveredCount / terminalCount) * 100 : 0;
-            const failedShare = terminalCount > 0 ? (deliverySuccessReport!.failedCount / terminalCount) * 100 : 0;
-            const cancelledShare = terminalCount > 0 ? (deliverySuccessReport!.cancelledCount / terminalCount) * 100 : 0;
+            const deliveredShare = terminalCount > 0 ? (deliveredCount / terminalCount) * 100 : 0;
+            const failedShare = terminalCount > 0 ? (failedCount / terminalCount) * 100 : 0;
+            const cancelledShare = terminalCount > 0 ? (cancelledCount / terminalCount) * 100 : 0;
+            const hasCustomDates = customReportStartDate !== "" || customReportEndDate !== "";
 
     const filtered = deliveries.filter((d) => {
         const matchesSearch =
@@ -161,7 +252,7 @@ export default function DeliveriesPage() {
                 <div className="card-header metric-summary-header">
                     <div>
                         <h2>Delivery Success Summary</h2>
-                        <p className="metric-summary-caption">Delivered vs Failed vs Cancelled</p>
+                        <p className="metric-summary-caption">Delivered vs Failed vs Cancelled | {REPORT_TIME_PERIOD_LABEL[reportPeriod]}</p>
                     </div>
                     <div className="metric-summary-actions">
                         <button type="button" className="btn btn-secondary" onClick={() => void loadDeliverySuccessReport()} disabled={reportLoading}>
@@ -170,6 +261,66 @@ export default function DeliveriesPage() {
                     </div>
                 </div>
                 <div className="card-body">
+                    <div className="delivery-success-filter">
+                        <div className="delivery-success-filter-row">
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Time Period</label>
+                                <select
+                                    className="form-select"
+                                    value={reportPeriod}
+                                    onChange={(event) => {
+                                        setReportPeriod(event.target.value as ReportTimePeriod);
+                                        setReportError("");
+                                    }}
+                                >
+                                    <option value="all">All Time</option>
+                                    <option value="today">Today</option>
+                                    <option value="last7Days">Last 7 Days</option>
+                                    <option value="last30Days">Last 30 Days</option>
+                                    <option value="last90Days">Last 90 Days</option>
+                                    <option value="custom">Custom Range</option>
+                                </select>
+                            </div>
+
+                            {reportPeriod === "custom" ? (
+                                <>
+                                    <div className="form-group" style={{ marginBottom: 0 }}>
+                                        <label className="form-label">Start Date</label>
+                                        <input
+                                            className="form-input"
+                                            type="date"
+                                            value={customReportStartDate}
+                                            onChange={(event) => setCustomReportStartDate(event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group" style={{ marginBottom: 0 }}>
+                                        <label className="form-label">End Date</label>
+                                        <input
+                                            className="form-input"
+                                            type="date"
+                                            value={customReportEndDate}
+                                            onChange={(event) => setCustomReportEndDate(event.target.value)}
+                                        />
+                                    </div>
+                                </>
+                            ) : null}
+                        </div>
+
+                        <div className="delivery-success-filter-actions">
+                            <button type="button" className="btn btn-primary" onClick={() => void applyReportPeriodFilter()} disabled={reportLoading}>
+                                {reportLoading ? "Applying..." : "Apply"}
+                            </button>
+                            <button
+                                type="button"
+                                className="btn"
+                                onClick={() => void clearReportPeriodFilter()}
+                                disabled={reportLoading || (reportPeriod === "all" && !hasCustomDates)}
+                            >
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+
                     {reportError ? <div className="alert alert-warning">{reportError}</div> : null}
 
                     <div className="stats-grid" style={{ marginBottom: 16 }}>
@@ -195,7 +346,7 @@ export default function DeliveriesPage() {
                             <div className="delivery-success-value">
                                 {reportLoading && !deliverySuccessReport
                                     ? "--"
-                                    : `${deliverySuccessReport?.deliveredCount ?? 0} (${deliveredShare.toFixed(1)}%)`}
+                                    : `${deliveredCount} (${deliveredShare.toFixed(1)}%)`}
                             </div>
                         </div>
                         <div className="delivery-success-track">
@@ -207,7 +358,7 @@ export default function DeliveriesPage() {
                             <div className="delivery-success-value">
                                 {reportLoading && !deliverySuccessReport
                                     ? "--"
-                                    : `${deliverySuccessReport?.failedCount ?? 0} (${failedShare.toFixed(1)}%)`}
+                                    : `${failedCount} (${failedShare.toFixed(1)}%)`}
                             </div>
                         </div>
                         <div className="delivery-success-track">
@@ -219,7 +370,7 @@ export default function DeliveriesPage() {
                             <div className="delivery-success-value">
                                 {reportLoading && !deliverySuccessReport
                                     ? "--"
-                                    : `${deliverySuccessReport?.cancelledCount ?? 0} (${cancelledShare.toFixed(1)}%)`}
+                                    : `${cancelledCount} (${cancelledShare.toFixed(1)}%)`}
                             </div>
                         </div>
                         <div className="delivery-success-track">
