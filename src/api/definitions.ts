@@ -53,6 +53,7 @@ export const API = {
 
   reports: {
     driverPerformance: "GET /driver/api/reports/driver-performance?startDateUtc&endDateUtc",
+    deliverySuccess: "GET /delivery/api/reports/delivery-success?startDateUtc&endDateUtc",
   },
 
   assignments: {
