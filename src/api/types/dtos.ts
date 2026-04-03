@@ -125,6 +125,13 @@ export interface FuelCostReportRowDto {
   totalFuelCostLkr: number;
 }
 
+export interface FuelCostReportQuery {
+  vehicleId?: number;
+  startDateUtc?: string;
+  endDateUtc?: string;
+  [key: string]: string | number | boolean | null | undefined;
+}
+
 export interface AssignmentDto {
   id: string;
   deliveryId?: string;
