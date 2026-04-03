@@ -100,6 +100,14 @@ export interface DriverPerformanceReportRowDto {
   onTimeRatePercent: number;
 }
 
+export interface DeliverySuccessReportDto {
+  deliveredCount: number;
+  failedCount: number;
+  cancelledCount: number;
+  terminalCount: number;
+  successRatePercentage: number;
+}
+
 export interface VehicleUtilizationReportRowDto {
   vehicleId: number;
   tripsCount: number;
@@ -173,6 +181,12 @@ export interface DriverListQuery {
 }
 
 export interface DriverPerformanceReportQuery {
+  startDateUtc?: string;
+  endDateUtc?: string;
+  [key: string]: string | number | boolean | null | undefined;
+}
+
+export interface DeliverySuccessReportQuery {
   startDateUtc?: string;
   endDateUtc?: string;
   [key: string]: string | number | boolean | null | undefined;
