@@ -18,10 +18,13 @@ function getReasonClasses(reason: string): string {
 
 export function RecommendationItem({ recommendation, rank }: RecommendationItemProps) {
   const isTopRecommendation = rank === 1;
-
-  const distanceText = recommendation.distanceKm === 0 ? "—" : `${recommendation.distanceKm.toFixed(1)} km`;
-  const etaText = recommendation.etaMinutes === 0 ? "—" : `${recommendation.etaMinutes} min`;
-  const fuelText = recommendation.fuelCost === 0 ? "—" : `Rs ${recommendation.fuelCost.toFixed(0)}`;
+  const vehicleLabel = recommendation.plateNumber?.trim() || recommendation.vehicleId;
+  const vehicleType = [recommendation.make, recommendation.model].filter(Boolean).join(" ");
+  const distanceText =
+    typeof recommendation.distanceToPickupKm === "number" && recommendation.distanceToPickupKm > 0
+      ? `${recommendation.distanceToPickupKm.toFixed(1)} km`
+      : "—";
+  const locationText = recommendation.currentLocation?.trim() || "Unavailable";
 
   return (
     <article
@@ -43,7 +46,7 @@ export function RecommendationItem({ recommendation, rank }: RecommendationItemP
             {rank}
           </div>
           <div className="flex items-center gap-2">
-            <h3 className="text-white font-semibold">Vehicle {recommendation.vehicleId}</h3>
+            <h3 className="text-white font-semibold">{vehicleLabel}</h3>
             <span className="text-sm text-slate-400">Score {recommendation.score.toFixed(1)}</span>
           </div>
         </div>
@@ -51,7 +54,7 @@ export function RecommendationItem({ recommendation, rank }: RecommendationItemP
       
       <div className="mt-1 flex items-center gap-2 text-sm text-slate-400 pl-9">
         <UserRound className="h-3.5 w-3.5" />
-        <span>{recommendation.driverName}</span>
+        <span>{vehicleType || `Vehicle #${recommendation.vehicleId}`}</span>
       </div>
 
       <div className="mt-3 pl-9">
@@ -68,21 +71,21 @@ export function RecommendationItem({ recommendation, rank }: RecommendationItemP
       <div className="mt-4 grid grid-cols-3 gap-3">
         <div className="rounded-md bg-slate-950 px-3 py-2 shadow-inner">
           <div className={["text-xs uppercase tracking-widest", isTopRecommendation ? "text-cyan-400/60" : "text-slate-500"].join(" ")}>
-            Distance
+            Pickup Distance
           </div>
           <div className="mt-1 text-sm font-semibold text-white">{distanceText}</div>
         </div>
         <div className="rounded-md bg-slate-950 px-3 py-2 shadow-inner">
           <div className={["text-xs uppercase tracking-widest", isTopRecommendation ? "text-cyan-400/60" : "text-slate-500"].join(" ")}>
-            ETA
+            Current Area
           </div>
-          <div className="mt-1 text-sm font-semibold text-white">{etaText}</div>
+          <div className="mt-1 text-sm font-semibold text-white">{locationText}</div>
         </div>
         <div className="rounded-md bg-slate-950 px-3 py-2 shadow-inner">
           <div className={["text-xs uppercase tracking-widest", isTopRecommendation ? "text-cyan-400/60" : "text-slate-500"].join(" ")}>
-            Fuel Cost
+            Vehicle ID
           </div>
-          <div className="mt-1 text-sm font-semibold text-white">{fuelText}</div>
+          <div className="mt-1 text-sm font-semibold text-white">#{recommendation.vehicleId}</div>
         </div>
       </div>
     </article>

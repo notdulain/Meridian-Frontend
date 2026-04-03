@@ -1,5 +1,5 @@
 import { API } from "@/src/api/definitions";
-import type { DriverDto, DriverListQuery, DriverPerformanceReportQuery, DriverPerformanceReportRowDto } from "@/src/api/types/dtos";
+import type { DriverDto, DriverListQuery, DriverPerformanceReportQuery, DriverPerformanceReportRowDto, DriverProfileDto } from "@/src/api/types/dtos";
 import { apiRequest } from "@/src/api/utils/request";
 
 export const driverService = {
@@ -7,7 +7,7 @@ export const driverService = {
   list: (query?: DriverListQuery) => apiRequest<DriverDto[]>(API.drivers.list, { query }),
   deleted: (query?: DriverListQuery) => apiRequest<DriverDto[]>(API.drivers.deleted, { query }),
   byId: (id: string) => apiRequest<DriverDto>(API.drivers.byId, { params: { id } }),
-  me: () => apiRequest<DriverDto>(API.drivers.me),
+  me: () => apiRequest<DriverProfileDto>(API.drivers.me),
   update: (id: string, payload: Partial<DriverDto>) =>
     apiRequest<DriverDto, Partial<DriverDto>>(API.drivers.update, { params: { id }, data: payload }),
   updateHours: (id: string, payload: { maxWorkingHoursPerDay: number }) =>

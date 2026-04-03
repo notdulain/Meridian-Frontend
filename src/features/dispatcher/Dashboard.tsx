@@ -48,6 +48,26 @@ export default function DispatcherWorkflowDashboard() {
   const [successMessage, setSuccessMessage] = useState("");
   const summaryRefreshInFlight = useRef(false);
 
+  const getApiErrorMessage = (error: unknown, fallback: string) => {
+    if (typeof error === "object" && error !== null) {
+      if ("message" in error) {
+        const message = (error as { message?: unknown }).message;
+        if (typeof message === "string" && message.trim().length > 0) {
+          return message;
+        }
+      }
+
+      if ("response" in error) {
+        const response = (error as { response?: { data?: { message?: string } } }).response;
+        if (response?.data?.message) {
+          return response.data.message;
+        }
+      }
+    }
+
+    return fallback;
+  };
+
   useEffect(() => {
     void loadDeliveries();
     void loadDrivers();
@@ -89,8 +109,8 @@ export default function DispatcherWorkflowDashboard() {
     try {
       const data = await driverService.available();
       setDrivers(data);
-    } catch {
-      setDriverError("Failed to load available drivers.");
+    } catch (error) {
+      setDriverError(getApiErrorMessage(error, "Failed to load available drivers."));
     } finally {
       setDriverLoading(false);
     }
@@ -125,16 +145,30 @@ export default function DispatcherWorkflowDashboard() {
     setRouteLoading(true);
     setRouteError("");
     try {
-      const [alternatives, history] = await Promise.all([
+      const [alternativesResult, historyResult] = await Promise.allSettled([
         routeService.alternatives(origin, destination),
         routeService.history(origin, destination),
       ]);
-      setRouteAlternatives(alternatives);
-      setRouteHistory(history);
-    } catch {
-      setRouteError("Failed to load routes for selected delivery.");
-      setRouteAlternatives([]);
-      setRouteHistory([]);
+
+      if (alternativesResult.status === "fulfilled") {
+        setRouteAlternatives(alternativesResult.value);
+      } else {
+        setRouteAlternatives([]);
+      }
+
+      if (historyResult.status === "fulfilled") {
+        setRouteHistory(historyResult.value);
+      } else {
+        setRouteHistory([]);
+      }
+
+      if (alternativesResult.status === "rejected" && historyResult.status === "rejected") {
+        setRouteError(getApiErrorMessage(alternativesResult.reason, "Failed to load routes for selected delivery."));
+      } else if (alternativesResult.status === "rejected") {
+        setRouteError(getApiErrorMessage(alternativesResult.reason, "Failed to load live route alternatives."));
+      } else if (historyResult.status === "rejected") {
+        setRouteError(getApiErrorMessage(historyResult.reason, "Failed to load route history."));
+      }
     } finally {
       setRouteLoading(false);
     }
@@ -153,8 +187,8 @@ export default function DispatcherWorkflowDashboard() {
     try {
       const recommended = await deliveryService.recommendVehicles(delivery.id);
       setVehicles(recommended);
-    } catch {
-      setVehicleError("Failed to load vehicle recommendations.");
+    } catch (error) {
+      setVehicleError(getApiErrorMessage(error, "Failed to load vehicle recommendations."));
       setVehicles([]);
     } finally {
       setVehicleLoading(false);
@@ -236,8 +270,8 @@ export default function DispatcherWorkflowDashboard() {
 
       setShowConfirmModal(false);
       setSuccessMessage("Assignment created successfully.");
-    } catch {
-      setConfirmError("Failed to create assignment.");
+    } catch (error) {
+      setConfirmError(getApiErrorMessage(error, "Failed to create assignment."));
     } finally {
       setConfirmLoading(false);
     }

@@ -30,6 +30,43 @@ export interface UserDto {
   isActive?: boolean;
 }
 
+export interface CreateDriverAccountRequestDto {
+  fullName: string;
+  email: string;
+  password: string;
+  licenseNumber: string;
+  licenseExpiry: string;
+  phoneNumber: string;
+  maxWorkingHoursPerDay: number;
+}
+
+export interface DriverProfileDto {
+  driverId: number;
+  userId: string;
+  fullName: string;
+  licenseNumber: string;
+  licenseExpiry: string;
+  phoneNumber: string;
+  maxWorkingHoursPerDay: number;
+  currentWorkingHoursToday: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateDriverAccountResponseDto {
+  user: {
+    userId: number;
+    fullName: string;
+    email: string;
+    role: AuthRole;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
+  driver: DriverProfileDto;
+}
+
 export interface RoleDto {
   id: string;
   name: string;
@@ -85,10 +122,13 @@ export interface RouteOptionDto {
 }
 
 export interface TrackingLocationDto {
-  driverId: string;
+  locationUpdateId?: number;
+  assignmentId: number;
+  driverId: number;
   latitude: number;
   longitude: number;
   timestamp?: string;
+  speedKmh?: number | null;
 }
 
 export interface DashboardSummaryDto {

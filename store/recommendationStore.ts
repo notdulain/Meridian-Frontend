@@ -21,65 +21,27 @@ function asNumber(value: unknown): number {
   return 0;
 }
 
-function normalizeRecommendationSource(payload: unknown): unknown[] {
-  if (Array.isArray(payload)) return payload;
-  if (!payload || typeof payload !== "object") return [];
-
-  const record = payload as Record<string, unknown>;
-
-  if (Array.isArray(record.recommendations)) return record.recommendations;
-  if (Array.isArray(record.routes)) return record.routes;
-  if (Array.isArray(record.data)) return record.data;
-
-  return [];
-}
-
 function normalizeRecommendations(payload: unknown): VehicleRecommendation[] {
-  return normalizeRecommendationSource(payload)
+  const source = Array.isArray(payload) ? payload : [];
+
+  return source
     .map((item): VehicleRecommendation | null => {
       if (!item || typeof item !== "object") return null;
       const record = item as Record<string, unknown>;
 
       return {
         vehicleId: String(record.vehicleId ?? record.id ?? ""),
-        driverName: String(record.driverName ?? record.driver ?? "Unassigned"),
-        distanceKm: asNumber(record.distanceKm ?? record.distance ?? record.distanceValue),
-        etaMinutes: asNumber(record.etaMinutes ?? record.durationMinutes ?? record.eta ?? record.duration),
-        fuelCost: asNumber(
-          record.fuelCost
-          ?? record.fuelCostLkr
-          ?? record.estimatedFuelCost
-          ?? record.estimatedFuelCostLkr,
-        ),
-        reason: String(record.reason ?? "Recommendation generated from current route conditions"),
-        score: asNumber(record.score),
+        plateNumber: typeof record.plateNumber === "string" ? record.plateNumber : undefined,
+        make: typeof record.make === "string" ? record.make : undefined,
+        model: typeof record.model === "string" ? record.model : undefined,
+        currentLocation: typeof record.currentLocation === "string" ? record.currentLocation : undefined,
+        distanceToPickupKm: asNumber(record.distanceToPickupKm),
+        reason: String(record.recommendationReason ?? record.reason ?? "Recommendation generated from current route conditions"),
+        score: asNumber(record.matchScore ?? record.score),
       };
     })
     .filter((item): item is VehicleRecommendation => Boolean(item?.vehicleId))
     .sort((a, b) => b.score - a.score);
-}
-
-function buildMockRecommendations(deliveryId: string): VehicleRecommendation[] {
-  return [
-    {
-      vehicleId: "V001",
-      driverName: "John Perera",
-      distanceKm: 6.2,
-      etaMinutes: 14,
-      fuelCost: 1250,
-      reason: `Top match for delivery ${deliveryId}`,
-      score: 9.4,
-    },
-    {
-      vehicleId: "V002",
-      driverName: "Alex Fernando",
-      distanceKm: 8.1,
-      etaMinutes: 18,
-      fuelCost: 1410,
-      reason: "Lower fuel cost option",
-      score: 8.7,
-    },
-  ];
 }
 
 export const useRecommendationStore = create<RecommendationState>((set) => ({
@@ -95,16 +57,16 @@ export const useRecommendationStore = create<RecommendationState>((set) => ({
       const recommendations = normalizeRecommendations(response.data);
 
       set({
-        recommendations: recommendations.length > 0 ? recommendations : buildMockRecommendations(deliveryId),
+        recommendations,
         loading: false,
         error: null,
       });
-    } catch (_error) {
+    } catch {
       console.warn("Failed to load vehicle recommendations");
       set({
-        recommendations: buildMockRecommendations(deliveryId),
+        recommendations: [],
         loading: false,
-        error: "Showing fallback recommendations.",
+        error: "Failed to load vehicle recommendations.",
       });
     }
   },
