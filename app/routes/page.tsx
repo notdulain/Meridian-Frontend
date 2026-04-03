@@ -2,19 +2,22 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { reportService } from "@/src/api/services/reportService";
-import type { FuelCostReportRowDto } from "@/src/api/types/dtos";
+import type { FuelCostReportQuery, FuelCostReportRowDto } from "@/src/api/types/dtos";
 
 export default function RoutesPage() {
     const [rows, setRows] = useState<FuelCostReportRowDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [reportVehicleFilter, setReportVehicleFilter] = useState("");
+    const [reportStartDate, setReportStartDate] = useState("");
+    const [reportEndDate, setReportEndDate] = useState("");
 
-    async function loadFuelCostReport() {
+    async function loadFuelCostReport(query?: FuelCostReportQuery) {
         setLoading(true);
         setError("");
 
         try {
-            const response = await reportService.fuelCost();
+            const response = await reportService.fuelCost(query);
             setRows(Array.isArray(response) ? response : []);
         } catch {
             setError("Unable to load fuel cost report.");
@@ -26,6 +29,61 @@ export default function RoutesPage() {
     useEffect(() => {
         void loadFuelCostReport();
     }, []);
+
+    const vehicleOptions = useMemo(() => {
+        const seen = new Set<number>();
+        for (const row of rows) {
+            seen.add(row.vehicleId);
+        }
+
+        const selectedVehicleId = Number(reportVehicleFilter);
+        if (reportVehicleFilter !== "" && !Number.isNaN(selectedVehicleId)) {
+            seen.add(selectedVehicleId);
+        }
+
+        return Array.from(seen).sort((a, b) => a - b);
+    }, [rows, reportVehicleFilter]);
+
+    function buildFuelCostQuery(): FuelCostReportQuery | null {
+        if (reportStartDate && reportEndDate && reportEndDate < reportStartDate) {
+            setError("End date must be greater than or equal to start date.");
+            return null;
+        }
+
+        const query: FuelCostReportQuery = {};
+
+        if (reportVehicleFilter !== "") {
+            query.vehicleId = Number(reportVehicleFilter);
+        }
+
+        if (reportStartDate) {
+            query.startDateUtc = new Date(`${reportStartDate}T00:00:00.000Z`).toISOString();
+        }
+
+        if (reportEndDate) {
+            const endExclusive = new Date(`${reportEndDate}T00:00:00.000Z`);
+            endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
+            query.endDateUtc = endExclusive.toISOString();
+        }
+
+        return query;
+    }
+
+    async function applyFilters() {
+        const query = buildFuelCostQuery();
+        if (query === null) {
+            return;
+        }
+
+        await loadFuelCostReport(query);
+    }
+
+    async function clearFilters() {
+        setReportVehicleFilter("");
+        setReportStartDate("");
+        setReportEndDate("");
+        await loadFuelCostReport();
+    }
 
     const totalFuelCost = useMemo(
         () => rows.reduce((sum, row) => sum + row.totalFuelCostLkr, 0),
@@ -55,6 +113,51 @@ export default function RoutesPage() {
                 </div>
                 <div className="card-body">
                     {error ? <div className="alert alert-warning">{error}</div> : null}
+
+                    <div className="form-row mb-4">
+                        <div className="form-group">
+                            <label className="form-label">Start Date</label>
+                            <input
+                                className="form-input"
+                                type="date"
+                                value={reportStartDate}
+                                onChange={(event) => setReportStartDate(event.target.value)}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">End Date</label>
+                            <input
+                                className="form-input"
+                                type="date"
+                                value={reportEndDate}
+                                onChange={(event) => setReportEndDate(event.target.value)}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Vehicle</label>
+                            <select
+                                className="form-select"
+                                value={reportVehicleFilter}
+                                onChange={(event) => setReportVehicleFilter(event.target.value)}
+                            >
+                                <option value="">All Vehicles</option>
+                                {vehicleOptions.map((vehicleId) => (
+                                    <option key={vehicleId} value={String(vehicleId)}>
+                                        #{vehicleId}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="form-row mb-4">
+                        <button type="button" className="btn btn-primary" onClick={() => void applyFilters()} disabled={loading}>
+                            {loading ? "Applying..." : "Apply Filters"}
+                        </button>
+                        <button type="button" className="btn" onClick={() => void clearFilters()} disabled={loading}>
+                            Clear Filters
+                        </button>
+                    </div>
 
                     <div className="stats-grid" style={{ marginBottom: 16 }}>
                         <div className="stat-card">
