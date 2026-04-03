@@ -677,6 +677,54 @@ tbody tr:hover { background: rgba(255, 255, 255, 0.05); }
   margin: 20px 0;
 }
 
+.delivery-success-breakdown {
+  display: grid;
+  gap: 10px;
+}
+
+.delivery-success-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.delivery-success-label {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.delivery-success-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.delivery-success-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.delivery-success-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.delivery-success-fill-delivered {
+  background: var(--color-success);
+}
+
+.delivery-success-fill-failed {
+  background: var(--color-error);
+}
+
+.delivery-success-fill-cancelled {
+  background: #94a3b8;
+}
+
 @media (max-width: 768px) {
   .metric-summary-header {
     flex-direction: column;
