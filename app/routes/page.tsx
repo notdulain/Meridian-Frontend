@@ -1,13 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import apiClient from "@/src/api/client";
 import { assignmentService } from "@/src/api/services/assignmentService";
 import { reportService } from "@/src/api/services/reportService";
 import { downloadBlobFile } from "@/src/lib/download";
 import type { AssignmentHistoryRowDto, FuelCostReportQuery, FuelCostReportRowDto } from "@/src/api/types/dtos";
 
+interface VehicleRecord {
+    vehicleId: number;
+}
+
 export default function RoutesPage() {
     const [rows, setRows] = useState<FuelCostReportRowDto[]>([]);
+    const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [reportVehicleFilter, setReportVehicleFilter] = useState("");
@@ -74,14 +80,36 @@ export default function RoutesPage() {
         }
     }, [loadAssignmentCrossReference]);
 
+    const loadVehicles = useCallback(async () => {
+        try {
+            const response = await apiClient.get<{ data?: VehicleRecord[] }>("/vehicle/api/vehicles", {
+                params: { page: 1, pageSize: 100 },
+            });
+
+            setVehicles(Array.isArray(response.data?.data) ? response.data.data : []);
+        } catch {
+            setVehicles([]);
+        }
+    }, []);
+
     useEffect(() => {
+        void loadVehicles();
         void loadFuelCostReport();
-    }, [loadFuelCostReport]);
+    }, [loadFuelCostReport, loadVehicles]);
 
     const vehicleOptions = useMemo(() => {
         const seen = new Set<number>();
+
+        for (const vehicle of vehicles) {
+            if (typeof vehicle.vehicleId === "number") {
+                seen.add(vehicle.vehicleId);
+            }
+        }
+
         for (const row of rows) {
-            seen.add(row.vehicleId);
+            if (typeof row.vehicleId === "number") {
+                seen.add(row.vehicleId);
+            }
         }
 
         const selectedVehicleId = Number(reportVehicleFilter);
@@ -90,7 +118,7 @@ export default function RoutesPage() {
         }
 
         return Array.from(seen).sort((a, b) => a - b);
-    }, [rows, reportVehicleFilter]);
+    }, [rows, reportVehicleFilter, vehicles]);
 
     function buildFuelCostQuery(): FuelCostReportQuery | null {
         if (reportStartDate && reportEndDate && reportEndDate < reportStartDate) {
