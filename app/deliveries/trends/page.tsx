@@ -16,6 +16,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { deliveryService } from "@/src/api/services/deliveryService";
+import { downloadBlobFile } from "@/src/lib/download";
 import type { DeliveryTrendPointDto, TrendRange } from "@/src/api/types/dtos";
 
 export default function DeliveryTrendsPage() {
@@ -23,6 +24,8 @@ export default function DeliveryTrendsPage() {
   const [data, setData] = useState<DeliveryTrendPointDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     fetchTrends(range);
@@ -43,6 +46,20 @@ export default function DeliveryTrendsPage() {
       setError(err instanceof Error ? err.message : "Failed to load delivery trends.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const exportTrendsCsv = async () => {
+    setExporting(true);
+    setExportError(null);
+
+    try {
+      const file = await deliveryService.trendsCsv({ range });
+      downloadBlobFile(file, `delivery-trends-${range}.csv`);
+    } catch (err: unknown) {
+      setExportError(err instanceof Error ? err.message : "Failed to export delivery trends.");
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -86,27 +103,32 @@ export default function DeliveryTrendsPage() {
           <p>Analyze delivery patterns over time</p>
         </div>
         
-        <div style={{ display: "flex", gap: "8px", backgroundColor: "var(--color-bg-secondary)", padding: "4px", borderRadius: "8px" }}>
-          {(["daily", "weekly", "monthly"] as TrendRange[]).map((r) => (
-            <button
-              key={r}
-              onClick={() => setRange(r)}
-              style={{
-                padding: "6px 16px",
-                border: "none",
-                borderRadius: "6px",
-                backgroundColor: range === r ? "var(--color-bg-primary)" : "transparent",
-                color: range === r ? "var(--color-text-primary)" : "var(--color-text-secondary)",
-                fontWeight: range === r ? 600 : 400,
-                boxShadow: range === r ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
-                cursor: "pointer",
-                textTransform: "capitalize",
-                transition: "all 0.2s"
-              }}
-            >
-              {r}
-            </button>
-          ))}
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "8px", backgroundColor: "var(--color-bg-secondary)", padding: "4px", borderRadius: "8px" }}>
+            {(["daily", "weekly", "monthly"] as TrendRange[]).map((r) => (
+              <button
+                key={r}
+                onClick={() => setRange(r)}
+                style={{
+                  padding: "6px 16px",
+                  border: "none",
+                  borderRadius: "6px",
+                  backgroundColor: range === r ? "var(--color-bg-primary)" : "transparent",
+                  color: range === r ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                  fontWeight: range === r ? 600 : 400,
+                  boxShadow: range === r ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                  cursor: "pointer",
+                  textTransform: "capitalize",
+                  transition: "all 0.2s"
+                }}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+          <button className="btn btn-secondary" type="button" onClick={() => void exportTrendsCsv()} disabled={loading || exporting}>
+            {exporting ? "Exporting..." : "Export CSV"}
+          </button>
         </div>
       </div>
 
@@ -117,6 +139,12 @@ export default function DeliveryTrendsPage() {
           <button onClick={() => fetchTrends(range)} style={{ marginLeft: "auto", background: "none", border: "none", color: "inherit", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}>
             <RefreshCw size={14} /> Retry
           </button>
+        </div>
+      ) : null}
+
+      {exportError ? (
+        <div className="alert alert-warning" style={{ marginBottom: "20px" }}>
+          {exportError}
         </div>
       ) : null}
 
