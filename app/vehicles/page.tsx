@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import apiClient from "@/src/api/client";
 import { vehicleService } from "@/src/api/services/vehicleService";
+import { downloadBlobFile } from "@/src/lib/download";
 
 interface VehicleRecord {
   vehicleId: number;
@@ -41,6 +42,7 @@ export default function VehiclesPage() {
   const [reportRows, setReportRows] = useState<VehicleUtilizationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [reportLoading, setReportLoading] = useState(true);
+  const [reportExporting, setReportExporting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [reportError, setReportError] = useState("");
@@ -60,7 +62,7 @@ export default function VehiclesPage() {
         params: { page: 1, pageSize: 50 },
       });
       setVehicles(Array.isArray(response.data?.data) ? response.data.data : []);
-    } catch (loadError) {
+    } catch {
       console.warn("Failed to load vehicles");
       setError("Unable to load vehicles.");
     } finally {
@@ -75,7 +77,7 @@ export default function VehiclesPage() {
     try {
       const rows = await vehicleService.utilizationReport(query);
       setReportRows(Array.isArray(rows) ? (rows as VehicleUtilizationRecord[]) : []);
-    } catch (loadError) {
+    } catch {
       console.warn("Failed to load vehicle utilization report");
       setReportError("Unable to load vehicle utilization report.");
     } finally {
@@ -120,6 +122,27 @@ export default function VehiclesPage() {
     await loadVehicleUtilizationReport();
   }
 
+  async function exportVehicleUtilizationReportCsv() {
+    if (reportStartDate && reportEndDate && reportEndDate < reportStartDate) {
+      setReportError("End date must be greater than or equal to start date.");
+      return;
+    }
+
+    setReportExporting(true);
+    setReportError("");
+
+    try {
+      const query = buildReportDateQuery();
+      const payload = Object.keys(query).length === 0 ? undefined : query;
+      const file = await vehicleService.utilizationReportCsv(payload);
+      downloadBlobFile(file, "vehicle-utilization-report.csv");
+    } catch {
+      setReportError("Unable to export vehicle utilization report.");
+    } finally {
+      setReportExporting(false);
+    }
+  }
+
   const filteredVehicles = useMemo(
     () =>
       vehicles.filter((vehicle) => {
@@ -157,7 +180,7 @@ export default function VehiclesPage() {
       const created = response.data?.data;
       setVehicles((current) => (created ? [created, ...current] : current));
       setForm(INITIAL_FORM);
-    } catch (saveError) {
+    } catch {
       console.warn("Failed to create vehicle");
       setError("Unable to create vehicle.");
     } finally {
@@ -271,11 +294,19 @@ export default function VehiclesPage() {
                 </div>
               </div>
               <div className="form-row mb-4">
-                <button type="button" className="btn btn-primary" onClick={() => void applyReportFilters()} disabled={reportLoading}>
+                <button type="button" className="btn btn-primary" onClick={() => void applyReportFilters()} disabled={reportLoading || reportExporting}>
                   Apply Report Filters
                 </button>
-                <button type="button" className="btn" onClick={() => void clearReportFilters()} disabled={reportLoading}>
+                <button type="button" className="btn" onClick={() => void clearReportFilters()} disabled={reportLoading || reportExporting}>
                   Clear Filters
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => void exportVehicleUtilizationReportCsv()}
+                  disabled={reportLoading || reportExporting}
+                >
+                  {reportExporting ? "Exporting..." : "Export CSV"}
                 </button>
               </div>
               {reportError ? <div className="alert alert-error">{reportError}</div> : null}
