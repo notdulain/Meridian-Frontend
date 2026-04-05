@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/api/client";
 import type { DeliveryDto, DeliveryStatus } from "@/lib/types";
 import { reportService } from "@/src/api/services/reportService";
+import { downloadBlobFile } from "@/src/lib/download";
 import type { DeliverySuccessReportDto, DeliverySuccessReportQuery } from "@/src/api/types/dtos";
 
 type ReportTimePeriod = "all" | "today" | "last7Days" | "last30Days" | "last90Days" | "custom";
@@ -44,6 +45,7 @@ export default function DeliveriesPage() {
     const [customReportEndDate, setCustomReportEndDate] = useState("");
     const [loading, setLoading] = useState(true);
     const [reportLoading, setReportLoading] = useState(true);
+    const [reportExporting, setReportExporting] = useState(false);
     const [error, setError] = useState("");
     const [reportError, setReportError] = useState("");
     const [search, setSearch] = useState("");
@@ -139,6 +141,26 @@ export default function DeliveriesPage() {
         setCustomReportStartDate("");
         setCustomReportEndDate("");
         await loadDeliverySuccessReport();
+    }
+
+    async function exportDeliverySuccessReportCsv() {
+        const query = buildReportQueryByPeriod();
+        if (query === null) {
+            return;
+        }
+
+        setReportExporting(true);
+        setReportError("");
+
+        try {
+            const payload = Object.keys(query).length === 0 ? undefined : query;
+            const file = await reportService.deliverySuccessCsv(payload);
+            downloadBlobFile(file, "delivery-success-report.csv");
+        } catch {
+            setReportError("Failed to export delivery success report.");
+        } finally {
+            setReportExporting(false);
+        }
     }
 
     async function handleDelete(id: number) {
@@ -262,6 +284,14 @@ export default function DeliveriesPage() {
                     <div className="metric-summary-actions">
                         <button type="button" className="btn btn-secondary" onClick={() => void loadDeliverySuccessReport()} disabled={reportLoading}>
                             {reportLoading ? "Refreshing..." : "Refresh"}
+                        </button>
+                        <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={() => void exportDeliverySuccessReportCsv()}
+                            disabled={reportLoading || reportExporting}
+                        >
+                            {reportExporting ? "Exporting..." : "Export CSV"}
                         </button>
                     </div>
                 </div>

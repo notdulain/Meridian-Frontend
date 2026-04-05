@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import apiClient from "@/src/api/client";
 import { driverService } from "@/src/api/services/driverService";
 import { userService } from "@/src/api/services/userService";
+import { downloadBlobFile } from "@/src/lib/download";
 
 interface DriverRecord {
   driverId: number;
@@ -39,6 +40,7 @@ export default function DriversPage() {
   const [reportRows, setReportRows] = useState<DriverPerformanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [reportLoading, setReportLoading] = useState(true);
+  const [reportExporting, setReportExporting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [reportError, setReportError] = useState("");
@@ -146,6 +148,27 @@ export default function DriversPage() {
     setReportStartDate("");
     setReportEndDate("");
     await loadDriverPerformanceReport();
+  }
+
+  async function exportDriverPerformanceReportCsv() {
+    if (reportStartDate && reportEndDate && reportEndDate < reportStartDate) {
+      setReportError("End date must be greater than or equal to start date.");
+      return;
+    }
+
+    setReportExporting(true);
+    setReportError("");
+
+    try {
+      const query = buildReportDateQuery();
+      const payload = Object.keys(query).length === 0 ? undefined : query;
+      const file = await driverService.performanceReportCsv(payload);
+      downloadBlobFile(file, "driver-performance-report.csv");
+    } catch {
+      setReportError("Unable to export driver performance report.");
+    } finally {
+      setReportExporting(false);
+    }
   }
 
   const filteredDrivers = useMemo(
@@ -283,11 +306,19 @@ export default function DriversPage() {
                 </div>
               </div>
               <div className="form-row mb-4">
-                <button type="button" className="btn btn-primary" onClick={() => void applyReportDateFilter()} disabled={reportLoading}>
+                <button type="button" className="btn btn-primary" onClick={() => void applyReportDateFilter()} disabled={reportLoading || reportExporting}>
                   Apply Date Filter
                 </button>
-                <button type="button" className="btn" onClick={() => void clearReportDateFilter()} disabled={reportLoading}>
+                <button type="button" className="btn" onClick={() => void clearReportDateFilter()} disabled={reportLoading || reportExporting}>
                   Clear Filter
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => void exportDriverPerformanceReportCsv()}
+                  disabled={reportLoading || reportExporting}
+                >
+                  {reportExporting ? "Exporting..." : "Export CSV"}
                 </button>
               </div>
               {reportError ? <div className="alert alert-error">{reportError}</div> : null}
