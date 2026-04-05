@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { assignmentService } from "@/src/api/services/assignmentService";
 import { reportService } from "@/src/api/services/reportService";
+import { downloadBlobFile } from "@/src/lib/download";
 import type { AssignmentHistoryRowDto, FuelCostReportQuery, FuelCostReportRowDto } from "@/src/api/types/dtos";
 
 export default function RoutesPage() {
@@ -15,6 +16,7 @@ export default function RoutesPage() {
     const [assignmentHistoryRows, setAssignmentHistoryRows] = useState<AssignmentHistoryRowDto[]>([]);
     const [crossRefLoading, setCrossRefLoading] = useState(false);
     const [crossRefError, setCrossRefError] = useState("");
+    const [exportLoading, setExportLoading] = useState(false);
 
     function toDateKey(value: string): string {
         return new Date(value).toISOString().slice(0, 10);
@@ -131,6 +133,26 @@ export default function RoutesPage() {
         await loadFuelCostReport();
     }
 
+    async function exportFuelCostReportCsv() {
+        const query = buildFuelCostQuery();
+        if (query === null) {
+            return;
+        }
+
+        setExportLoading(true);
+        setError("");
+
+        try {
+            const payload = Object.keys(query).length === 0 ? undefined : query;
+            const file = await reportService.fuelCostCsv(payload);
+            downloadBlobFile(file, "fuel-cost-report.csv");
+        } catch {
+            setError("Unable to export fuel cost report.");
+        } finally {
+            setExportLoading(false);
+        }
+    }
+
     const totalFuelCost = useMemo(
         () => rows.reduce((sum, row) => sum + row.totalFuelCostLkr, 0),
         [rows],
@@ -189,6 +211,14 @@ export default function RoutesPage() {
                     <div className="metric-summary-actions">
                         <button type="button" className="btn btn-secondary" onClick={() => void loadFuelCostReport()} disabled={loading}>
                             {loading ? "Refreshing..." : "Refresh"}
+                        </button>
+                        <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={() => void exportFuelCostReportCsv()}
+                            disabled={loading || exportLoading}
+                        >
+                            {exportLoading ? "Exporting..." : "Export CSV"}
                         </button>
                     </div>
                 </div>
