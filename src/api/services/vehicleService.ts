@@ -1,6 +1,6 @@
 import { API } from "@/src/api/definitions";
 import type { VehicleDto, VehicleListQuery, VehicleUtilizationReportQuery, VehicleUtilizationReportRowDto } from "@/src/api/types/dtos";
-import { apiRequest } from "@/src/api/utils/request";
+import { apiDownload, apiRequest } from "@/src/api/utils/request";
 
 export const vehicleService = {
   create: (payload: Partial<VehicleDto>) => apiRequest<VehicleDto, Partial<VehicleDto>>(API.vehicles.create, { data: payload }),
@@ -14,4 +14,6 @@ export const vehicleService = {
   available: () => apiRequest<VehicleDto[]>(API.vehicles.available),
   utilizationReport: (query?: VehicleUtilizationReportQuery) =>
     apiRequest<VehicleUtilizationReportRowDto[]>(API.reports.vehicleUtilization, { query }),
+  utilizationReportCsv: (query?: VehicleUtilizationReportQuery) =>
+    apiDownload(API.reports.vehicleUtilizationCsv, { query }),
 };

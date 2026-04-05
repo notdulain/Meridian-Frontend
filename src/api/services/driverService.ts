@@ -1,6 +1,6 @@
 import { API } from "@/src/api/definitions";
 import type { DriverDto, DriverListQuery, DriverPerformanceReportQuery, DriverPerformanceReportRowDto, DriverProfileDto } from "@/src/api/types/dtos";
-import { apiRequest } from "@/src/api/utils/request";
+import { apiDownload, apiRequest } from "@/src/api/utils/request";
 
 export const driverService = {
   create: (payload: Partial<DriverDto>) => apiRequest<DriverDto, Partial<DriverDto>>(API.drivers.create, { data: payload }),
@@ -16,4 +16,6 @@ export const driverService = {
   available: () => apiRequest<DriverDto[]>(API.drivers.available),
   performanceReport: (query?: DriverPerformanceReportQuery) =>
     apiRequest<DriverPerformanceReportRowDto[]>(API.reports.driverPerformance, { query }),
+  performanceReportCsv: (query?: DriverPerformanceReportQuery) =>
+    apiDownload(API.reports.driverPerformanceCsv, { query }),
 };
