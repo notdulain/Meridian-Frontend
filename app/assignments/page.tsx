@@ -24,6 +24,25 @@ export default function AssignmentsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [search, setSearch] = useState("");
+    const [deletingId, setDeletingId] = useState<number | null>(null);
+
+    async function handleDelete(id: number) {
+        if (!confirm(`Are you sure you want to delete assignment #${id}?`)) return;
+        setDeletingId(id);
+        try {
+            // Backend maps "cancel" logic which terminates the assignment and cleans up associations
+            const res = await apiClient.put<{ success: boolean; message: string }>(`/assignment/api/assignments/${id}/cancel`, {});
+            if (res.success) {
+                setAssignments((prev) => prev.filter((a) => a.id !== id));
+            } else {
+                setError(res.message || "Failed to delete assignment.");
+            }
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Failed to delete assignment.");
+        } finally {
+            setDeletingId(null);
+        }
+    }
 
     useEffect(() => {
         apiClient
@@ -161,12 +180,20 @@ export default function AssignmentsPage() {
                                     <td>{assignment.assignedBy}</td>
                                     <td>
                                         <div style={{ display: "flex", gap: 6 }}>
-                                            <button
+                                            <Link
+                                                href={`/assignments/${assignment.id}`}
                                                 className="btn btn-secondary"
                                                 style={{ padding: "4px 10px", fontSize: 12 }}
-                                                onClick={() => alert('View details implies a separate page. ID: ' + assignment.id)}
                                             >
                                                 View
+                                            </Link>
+                                            <button
+                                                className="btn btn-danger"
+                                                style={{ padding: "4px 10px", fontSize: 12 }}
+                                                onClick={() => handleDelete(assignment.id)}
+                                                disabled={deletingId === assignment.id}
+                                            >
+                                                {deletingId === assignment.id ? "Deleting…" : "Delete"}
                                             </button>
                                         </div>
                                     </td>
