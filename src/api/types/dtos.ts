@@ -174,6 +174,7 @@ export interface TrackingLocationDto {
 
 export interface DashboardSummaryDto {
   totalDeliveries: number;
+  pendingDeliveries: number;
   activeDeliveries: number;
   completedDeliveries: number;
   overdueDeliveries: number;

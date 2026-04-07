@@ -1,8 +1,19 @@
 "use client";
 
 import { AuthGuard } from "@/components/AuthGuard";
+import { useEffect, useState } from "react";
+import { dashboardService } from "@/src/api/services/dashboardService";
+import type { DashboardSummaryDto } from "@/src/api/types/dtos";
 
 export default function AdminDashboardPage() {
+    const [summary, setSummary] = useState<DashboardSummaryDto | null>(null);
+
+    useEffect(() => {
+        dashboardService.summary()
+            .then(setSummary)
+            .catch((err) => console.error("Failed to load dashboard summary", err));
+    }, []);
+
     return (
         <AuthGuard allowedRoles={["Admin"]}>
             <div className="page-container">
@@ -16,18 +27,18 @@ export default function AdminDashboardPage() {
                 <div className="stats-grid">
                     <div className="stat-card">
                         <p className="stat-label">Total Vehicles</p>
-                        <p className="stat-value">124</p>
-                        <p className="stat-sub">+3 this month</p>
+                        <p className="stat-value">{summary ? (summary.availableVehicles || 0) + (summary.vehiclesOnTrip || 0) : "..."}</p>
+                        <p className="stat-sub">{summary ? `${summary.availableVehicles || 0} currently available` : "Loading..."}</p>
                     </div>
                     <div className="stat-card">
                         <p className="stat-label">Active Drivers</p>
-                        <p className="stat-value">86</p>
-                        <p className="stat-sub">12 currently on duty</p>
+                        <p className="stat-value">{summary ? (summary.availableDrivers || 0) + (summary.activeAssignments || 0) : "..."}</p>
+                        <p className="stat-sub">{summary ? `${summary.availableDrivers || 0} ready for new trips` : "Loading..."}</p>
                     </div>
                     <div className="stat-card">
                         <p className="stat-label">Pending Deliveries</p>
-                        <p className="stat-value">42</p>
-                        <p className="stat-sub">Requires assigning</p>
+                        <p className="stat-value">{summary ? (summary.pendingDeliveries || 0) : "..."}</p>
+                        <p className="stat-sub">{summary ? `Active in transit: ${summary.activeDeliveries || 0}` : "Loading..."}</p>
                     </div>
                     <div className="stat-card">
                         <p className="stat-label">System Health</p>
