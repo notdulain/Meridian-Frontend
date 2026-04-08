@@ -412,6 +412,54 @@ a { color: inherit; text-decoration: none; }
   margin-top: 4px;
 }
 
+.metric-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(127, 143, 163, 0.28));
+}
+
+.metric-card-skeleton-value {
+  width: 72px;
+  height: 34px;
+  margin-top: 8px;
+}
+
+.metric-card-skeleton-subtitle {
+  width: 150px;
+  height: 12px;
+  margin-top: 10px;
+}
+
+.metric-summary-header {
+  gap: 16px;
+}
+
+.metric-summary-caption {
+  margin-top: 3px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.metric-summary-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.metric-summary-timestamp {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
 /* ─── Table ───────────────────────────────────────────────────── */
 .table-container {
   overflow-x: auto;
@@ -627,4 +675,85 @@ tbody tr:hover { background: rgba(255, 255, 255, 0.05); }
   height: 1px;
   background: var(--color-border);
   margin: 20px 0;
+}
+
+.delivery-success-breakdown {
+  display: grid;
+  gap: 10px;
+}
+
+.delivery-success-filter {
+  margin-bottom: 16px;
+}
+
+.delivery-success-filter-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.delivery-success-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.delivery-success-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.delivery-success-label {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.delivery-success-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.delivery-success-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.delivery-success-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.delivery-success-fill-delivered {
+  background: var(--color-success);
+}
+
+.delivery-success-fill-failed {
+  background: var(--color-error);
+}
+
+.delivery-success-fill-cancelled {
+  background: #94a3b8;
+}
+
+@media (max-width: 768px) {
+  .metric-summary-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .metric-summary-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .delivery-success-filter-row {
+    grid-template-columns: 1fr;
+  }
 }

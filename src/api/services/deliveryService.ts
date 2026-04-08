@@ -1,6 +1,6 @@
 import { API } from "@/src/api/definitions";
-import type { DeliveryDto, DeliveryListQuery, VehicleDto } from "@/src/api/types/dtos";
-import { apiRequest } from "@/src/api/utils/request";
+import type { DeliveryDto, DeliveryListQuery, VehicleDto, DeliveryTrendQuery, DeliveryTrendPointDto } from "@/src/api/types/dtos";
+import { apiDownload, apiRequest } from "@/src/api/utils/request";
 
 export const deliveryService = {
   list: (query?: DeliveryListQuery) => apiRequest<DeliveryDto[]>(API.deliveries.list, { query }),
@@ -10,4 +10,6 @@ export const deliveryService = {
     apiRequest<DeliveryDto, Partial<DeliveryDto>>(API.deliveries.update, { params: { id }, data: payload }),
   delete: (id: string) => apiRequest<void>(API.deliveries.delete, { params: { id } }),
   recommendVehicles: (id: string) => apiRequest<VehicleDto[]>(API.deliveries.recommendVehicles, { params: { id } }),
+  trends: (query?: DeliveryTrendQuery) => apiRequest<DeliveryTrendPointDto[]>(API.reports.deliveryTrends, { query }),
+  trendsCsv: (query?: DeliveryTrendQuery) => apiDownload(API.reports.deliveryTrendsCsv, { query }),
 };

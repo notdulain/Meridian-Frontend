@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { LiveTrackingMap } from "@/components/LiveTrackingMap";
+import type { TrackedAssignment } from "@/lib/types/tracking";
 import { PREFERENCE_KEYS, getBooleanPreference } from "@/src/lib/preferences";
 
-export function TrackingMapCard() {
+export function TrackingMapCard({ assignments = [] }: { assignments?: TrackedAssignment[] }) {
   const [vehicleCount, setVehicleCount] = useState(0);
   const [mapEnabled] = useState(() => getBooleanPreference(PREFERENCE_KEYS.liveTrackingMapEnabled, true));
 
@@ -38,7 +39,11 @@ export function TrackingMapCard() {
       )}
       <div className="relative flex-1 w-full bg-slate-950 overflow-hidden">
         {mapEnabled && (
-          <LiveTrackingMap onVehicleCountChange={setVehicleCount} className="h-full w-full" />
+          <LiveTrackingMap 
+            assignments={assignments} 
+            onVehicleCountChange={setVehicleCount} 
+            className="h-full w-full" 
+          />
         )}
       </div>
 

@@ -6,4 +6,6 @@ export * from "@/src/api/services/driverService";
 export * from "@/src/api/services/assignmentService";
 export * from "@/src/api/services/routeService";
 export * from "@/src/api/services/trackingService";
+export * from "@/src/api/services/dashboardService";
 export * from "@/src/api/services/gatewayHealthService";
+export * from "@/src/api/services/reportService";

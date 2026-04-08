@@ -6,4 +6,12 @@ export const assignmentService = {
     const { data } = await api.post("/assignment/api/assignments", payload);
     return data;
   },
+  getActiveForDriver: async (driverId: number): Promise<any> => {
+    try {
+      const { data } = await api.get(`/assignment/api/assignments/driver/${driverId}/active`);
+      return data?.data;
+    } catch {
+      return null;
+    }
+  }
 };

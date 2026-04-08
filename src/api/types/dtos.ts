@@ -30,6 +30,43 @@ export interface UserDto {
   isActive?: boolean;
 }
 
+export interface CreateDriverAccountRequestDto {
+  fullName: string;
+  email: string;
+  password: string;
+  licenseNumber: string;
+  licenseExpiry: string;
+  phoneNumber: string;
+  maxWorkingHoursPerDay: number;
+}
+
+export interface DriverProfileDto {
+  driverId: number;
+  userId: string;
+  fullName: string;
+  licenseNumber: string;
+  licenseExpiry: string;
+  phoneNumber: string;
+  maxWorkingHoursPerDay: number;
+  currentWorkingHoursToday: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateDriverAccountResponseDto {
+  user: {
+    userId: number;
+    fullName: string;
+    email: string;
+    role: AuthRole;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
+  driver: DriverProfileDto;
+}
+
 export interface RoleDto {
   id: string;
   name: string;
@@ -63,10 +100,58 @@ export interface DriverPerformanceReportRowDto {
   onTimeRatePercent: number;
 }
 
+export interface DeliverySuccessReportDto {
+  deliveredCount: number;
+  failedCount: number;
+  cancelledCount: number;
+  terminalCount: number;
+  successRatePercentage: number;
+}
+
+export interface VehicleUtilizationReportRowDto {
+  vehicleId: number;
+  tripsCount: number;
+  kilometersDriven: number;
+  idleTimeMinutes: number;
+}
+
+export interface FuelCostReportRowDto {
+  vehicleId: number;
+  driverId: number;
+  periodStartUtc: string;
+  tripCount: number;
+  totalDistanceKm: number;
+  totalFuelConsumptionLitres: number;
+  totalFuelCostLkr: number;
+}
+
+export interface FuelCostReportQuery {
+  vehicleId?: number;
+  startDateUtc?: string;
+  endDateUtc?: string;
+  [key: string]: string | number | boolean | null | undefined;
+}
+
 export interface AssignmentDto {
   id: string;
   deliveryId?: string;
   driverId?: string;
+  [key: string]: unknown;
+}
+
+export interface AssignmentHistoryRowDto {
+  assignmentHistoryId?: number;
+  assignmentId?: number;
+  deliveryId?: number;
+  vehicleId?: number;
+  driverId?: number;
+  previousStatus?: string | null;
+  newStatus?: string;
+  action?: string;
+  changedBy?: string;
+  changedAt?: string;
+  assignedAt?: string;
+  createdAt?: string;
   [key: string]: unknown;
 }
 
@@ -78,10 +163,26 @@ export interface RouteOptionDto {
 }
 
 export interface TrackingLocationDto {
-  driverId: string;
+  locationUpdateId?: number;
+  assignmentId: number;
+  driverId: number;
   latitude: number;
   longitude: number;
   timestamp?: string;
+  speedKmh?: number | null;
+}
+
+export interface DashboardSummaryDto {
+  totalDeliveries: number;
+  pendingDeliveries: number;
+  activeDeliveries: number;
+  completedDeliveries: number;
+  overdueDeliveries: number;
+  availableVehicles: number;
+  vehiclesOnTrip: number;
+  availableDrivers: number;
+  activeAssignments: number;
+  generatedAtUtc: string;
 }
 
 export interface HealthDto {
@@ -119,6 +220,18 @@ export interface DriverPerformanceReportQuery {
   [key: string]: string | number | boolean | null | undefined;
 }
 
+export interface DeliverySuccessReportQuery {
+  startDateUtc?: string;
+  endDateUtc?: string;
+  [key: string]: string | number | boolean | null | undefined;
+}
+
+export interface VehicleUtilizationReportQuery {
+  startDateUtc?: string;
+  endDateUtc?: string;
+  [key: string]: string | number | boolean | null | undefined;
+}
+
 export interface AssignmentHistoryQuery {
   fromDate?: string;
   toDate?: string;
@@ -130,5 +243,25 @@ export interface AssignmentHistoryQuery {
 export interface RouteQuery {
   origin: string;
   destination: string;
+  [key: string]: string | number | boolean | null | undefined;
+}
+
+export type TrendRange = "daily" | "weekly" | "monthly";
+
+export interface DeliveryTrendPointDto {
+  period: string;
+  total: number;
+  pending: number;
+  assigned: number;
+  inTransit: number;
+  delivered: number;
+  failed: number;
+  canceled: number;
+}
+
+export interface DeliveryTrendQuery {
+  range?: TrendRange;
+  from?: string;
+  to?: string;
   [key: string]: string | number | boolean | null | undefined;
 }

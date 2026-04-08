@@ -124,7 +124,7 @@ export function RecommendationPanel({
           <div className="flex flex-col gap-4">
             {recommendations.map((recommendation, index) => (
               <RecommendationItem
-                key={`${recommendation.vehicleId}-${recommendation.driverName}-${index}`}
+                key={`${recommendation.vehicleId}-${index}`}
                 recommendation={recommendation}
                 rank={index + 1}
               />

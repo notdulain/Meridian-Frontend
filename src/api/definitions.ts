@@ -9,6 +9,7 @@ export const API = {
 
   users: {
     list: "GET /api/users",
+    createDriverAccount: "POST /api/users/driver-accounts",
     byId: "GET /api/users/:id",
     me: "GET /api/users/me",
     update: "PUT /api/users/:id",
@@ -53,6 +54,15 @@ export const API = {
 
   reports: {
     driverPerformance: "GET /driver/api/reports/driver-performance?startDateUtc&endDateUtc",
+    driverPerformanceCsv: "GET /driver/api/reports/driver-performance/csv?startDateUtc&endDateUtc",
+    deliverySuccess: "GET /delivery/api/reports/delivery-success?startDateUtc&endDateUtc",
+    deliverySuccessCsv: "GET /delivery/api/reports/delivery-success/csv?startDateUtc&endDateUtc",
+    vehicleUtilization: "GET /vehicle/api/reports/vehicle-utilization?startDateUtc&endDateUtc",
+    vehicleUtilizationCsv: "GET /vehicle/api/reports/vehicle-utilization/csv?startDateUtc&endDateUtc",
+    fuelCost: "GET /route/api/reports/fuel-cost?vehicleId&startDateUtc&endDateUtc",
+    fuelCostCsv: "GET /route/api/reports/fuel-cost/csv?vehicleId&startDateUtc&endDateUtc",
+    deliveryTrends: "GET /delivery/api/reports/delivery-trends?range&from&to",
+    deliveryTrendsCsv: "GET /delivery/api/reports/delivery-trends/csv?range&from&to",
   },
 
   assignments: {
@@ -81,6 +91,10 @@ export const API = {
     assignmentHistory: "GET /tracking/api/tracking/assignment/:assignmentId/history",
     driverLastKnown: "GET /tracking/api/tracking/driver/:driverId/last-known",
     hub: "WS /hubs/tracking",
+  },
+
+  dashboard: {
+    summary: "GET /api/dashboard/summary",
   },
 
   gatewayHealth: {

@@ -9,6 +9,21 @@ interface RequestArgs<TBody> {
   data?: TBody;
 }
 
+function buildRequestUrl(endpointDefinition: string, args: RequestArgs<unknown>): { method: HttpMethod; url: string } {
+  const parsed = parseEndpoint(endpointDefinition);
+  if (parsed.method === "WS") {
+    throw new Error(`Cannot call WS endpoint over HTTP: ${endpointDefinition}`);
+  }
+
+  const query =
+    parsed.queryKeys.length > 0 && args.query
+      ? Object.fromEntries(Object.entries(args.query).filter(([key]) => parsed.queryKeys.includes(key)))
+      : args.query;
+
+  const url = buildUrl(parsed.path, args.params, query);
+  return { method: parsed.method as HttpMethod, url };
+}
+
 function unwrapEnvelope<TResponse>(payload: unknown): TResponse {
   if (payload && typeof payload === "object" && "data" in payload) {
     return (payload as { data: TResponse }).data;
@@ -21,25 +36,35 @@ export async function apiRequest<TResponse, TBody = unknown>(
   endpointDefinition: string,
   args: RequestArgs<TBody> = {},
 ): Promise<TResponse> {
-  const parsed = parseEndpoint(endpointDefinition);
-  if (parsed.method === "WS") {
-    throw new Error(`Cannot call WS endpoint over HTTP: ${endpointDefinition}`);
-  }
-
-  const query =
-    parsed.queryKeys.length > 0 && args.query
-      ? Object.fromEntries(Object.entries(args.query).filter(([key]) => parsed.queryKeys.includes(key)))
-      : args.query;
-
-  const url = buildUrl(parsed.path, args.params, query);
+  const { method, url } = buildRequestUrl(endpointDefinition, args as RequestArgs<unknown>);
 
   try {
     const { data } = await apiClient.request<TResponse>({
-      method: parsed.method as HttpMethod,
+      method,
       url,
       data: args.data,
     });
     return unwrapEnvelope<TResponse>(data);
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+
+export async function apiDownload<TBody = unknown>(
+  endpointDefinition: string,
+  args: RequestArgs<TBody> = {},
+): Promise<Blob> {
+  const { method, url } = buildRequestUrl(endpointDefinition, args as RequestArgs<unknown>);
+
+  try {
+    const { data } = await apiClient.request<Blob>({
+      method,
+      url,
+      data: args.data,
+      responseType: "blob",
+    });
+
+    return data;
   } catch (error) {
     throw normalizeApiError(error);
   }

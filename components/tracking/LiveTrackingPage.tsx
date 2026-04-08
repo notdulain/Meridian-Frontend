@@ -6,6 +6,7 @@ import { AlertBanner } from "@/components/tracking/AlertBanner";
 import { RecommendationPanel } from "@/components/tracking/RecommendationPanel";
 import { TrackingMapCard } from "@/components/tracking/TrackingMapCard";
 import type { DeliveryDto } from "@/lib/types";
+import type { TrackedAssignment } from "@/lib/types/tracking";
 import apiClient from "@/src/api/client";
 
 export function LiveTrackingPage() {
@@ -16,6 +17,8 @@ export function LiveTrackingPage() {
   const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | null>(requestedDeliveryId);
   const [deliveryLoading, setDeliveryLoading] = useState(true);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
+
+  const [activeAssignments, setActiveAssignments] = useState<TrackedAssignment[]>([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -50,7 +53,23 @@ export function LiveTrackingPage() {
       }
     };
 
+    const loadAssignments = async () => {
+      try {
+        // We fetch active assignments to know which Dispatcher SignalR tracking groups to join
+        const res = await apiClient.get<{ success?: boolean; data?: TrackedAssignment[] }>("/assignment/api/assignments?pageSize=100");
+        if (!isMounted) return;
+
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          const nextAssignments = res.data.data.filter((assignment) => assignment.status === "Active");
+          setActiveAssignments(nextAssignments);
+        }
+      } catch {
+        console.warn("Failed to load assignments, map will stay idle until assignments are manually provided or retry successful.");
+      }
+    };
+
     void loadDeliveries();
+    void loadAssignments();
 
     return () => {
       isMounted = false;
@@ -87,7 +106,7 @@ export function LiveTrackingPage() {
 
         <div className="grid flex-1 min-h-0 grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 h-full min-h-0">
-            <TrackingMapCard />
+            <TrackingMapCard assignments={activeAssignments} />
           </div>
           <div className="lg:col-span-1 h-full min-h-0">
             <RecommendationPanel

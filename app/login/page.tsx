@@ -6,7 +6,7 @@ import type { AuthRole, LoginRequest, RegisterRequest } from "@/lib/types";
 import { authService } from "@/services/authService";
 import { useAuthStore } from "@/store/authStore";
 
-const ROLE_OPTIONS: AuthRole[] = ["Driver", "Dispatcher", "Admin"];
+const ROLE_OPTIONS: AuthRole[] = ["Dispatcher", "Admin"];
 
 export default function LoginPage() {
     const router = useRouter();
@@ -46,29 +46,46 @@ export default function LoginPage() {
         return "Dispatcher";
     };
 
-    const getRoleFromToken = (token: string): AuthRole | undefined => {
+    const decodeTokenPayload = (token: string): Record<string, unknown> | undefined => {
         try {
             const [, payload] = token.split(".");
             if (!payload) return undefined;
 
             const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
             const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-            const decoded = JSON.parse(atob(padded)) as Record<string, unknown>;
-
-            const rawRole =
-                decoded.role
-                ?? decoded["roles"]
-                ?? decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
-
-            const firstRole = Array.isArray(rawRole) ? rawRole[0] : rawRole;
-            if (firstRole === "Admin" || firstRole === "Dispatcher" || firstRole === "Driver") {
-                return firstRole;
-            }
+            return JSON.parse(atob(padded)) as Record<string, unknown>;
         } catch {
             return undefined;
         }
+    };
+
+    const getRoleFromToken = (token: string): AuthRole | undefined => {
+        const decoded = decodeTokenPayload(token);
+        if (!decoded) return undefined;
+
+        const rawRole =
+            decoded.role
+            ?? decoded["roles"]
+            ?? decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+
+        const firstRole = Array.isArray(rawRole) ? rawRole[0] : rawRole;
+        if (firstRole === "Admin" || firstRole === "Dispatcher" || firstRole === "Driver") {
+            return firstRole;
+        }
 
         return undefined;
+    };
+
+    const getUserIdFromToken = (token: string): number | undefined => {
+        const decoded = decodeTokenPayload(token);
+        if (!decoded) return undefined;
+
+        const rawSub = decoded.sub ?? decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"];
+        const sub = Array.isArray(rawSub) ? rawSub[0] : rawSub;
+        if (typeof sub !== "string") return undefined;
+
+        const parsed = Number(sub);
+        return Number.isFinite(parsed) ? parsed : undefined;
     };
 
     const getErrorStatus = (err: unknown): number | undefined => {
@@ -118,7 +135,8 @@ export default function LoginPage() {
         try {
             const data = await authService.login(signinForm);
             const userRole = getRoleFromToken(data.accessToken) ?? resolveRole(undefined, signinForm.email);
-            login(data.accessToken, userRole, { id: 1, email: signinForm.email });
+            const userId = getUserIdFromToken(data.accessToken) ?? 0;
+            login(data.accessToken, userRole, { id: userId, email: signinForm.email });
             redirectByRole(userRole);
         } catch (err: unknown) {
             if (getErrorStatus(err) === 401) {
@@ -147,7 +165,8 @@ export default function LoginPage() {
 
             if (data?.accessToken) {
                 const userRole = getRoleFromToken(data.accessToken) ?? signupForm.role;
-                login(data.accessToken, userRole, { id: 1, email: signupForm.email, name: signupForm.fullName });
+                const userId = getUserIdFromToken(data.accessToken) ?? 0;
+                login(data.accessToken, userRole, { id: userId, email: signupForm.email, name: signupForm.fullName });
                 redirectByRole(userRole);
                 return;
             }
@@ -190,7 +209,7 @@ export default function LoginPage() {
                         {mode === "signin" ? "Sign in to Meridian" : "Create Meridian account"}
                     </h1>
                     <p style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 4 }}>
-                        Select role and continue
+                        {mode === "signin" ? "Use your Meridian credentials to continue" : "Create an admin or dispatcher account"}
                     </p>
                 </div>
 

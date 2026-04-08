@@ -1,16 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AssignmentStepper } from "@/components/AssignmentStepper";
+import { MetricCard } from "@/components/dashboard/MetricCard";
 import { DeliveryList } from "@/components/DeliveryList";
 import { VehicleSelector } from "@/components/VehicleSelector";
 import { DriverSelector } from "@/components/DriverSelector";
 import { RouteSelector } from "@/components/RouteSelector";
+import { dashboardService } from "@/src/api/services/dashboardService";
 import { assignmentService } from "@/src/services/assignmentService";
 import { deliveryService } from "@/src/services/deliveryService";
 import { driverService } from "@/src/services/driverService";
 import { routeService } from "@/src/services/routeService";
+import type { DashboardSummaryDto } from "@/src/api/types/dtos";
 import type { DeliveryItem, DriverItem, RouteItem, VehicleItem } from "@/src/services/types";
+
+const DASHBOARD_REFRESH_INTERVAL_MS = 15_000;
 
 export default function DispatcherWorkflowDashboard() {
   const [deliveries, setDeliveries] = useState<DeliveryItem[]>([]);
@@ -18,6 +23,7 @@ export default function DispatcherWorkflowDashboard() {
   const [drivers, setDrivers] = useState<DriverItem[]>([]);
   const [routeAlternatives, setRouteAlternatives] = useState<RouteItem[]>([]);
   const [routeHistory, setRouteHistory] = useState<RouteItem[]>([]);
+  const [dashboardSummary, setDashboardSummary] = useState<DashboardSummaryDto | null>(null);
 
   const [selectedDelivery, setSelectedDelivery] = useState<DeliveryItem | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleItem | null>(null);
@@ -29,19 +35,51 @@ export default function DispatcherWorkflowDashboard() {
   const [driverLoading, setDriverLoading] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
 
   const [deliveryError, setDeliveryError] = useState("");
   const [vehicleError, setVehicleError] = useState("");
   const [driverError, setDriverError] = useState("");
   const [routeError, setRouteError] = useState("");
   const [confirmError, setConfirmError] = useState("");
+  const [summaryError, setSummaryError] = useState("");
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const summaryRefreshInFlight = useRef(false);
+
+  const getApiErrorMessage = (error: unknown, fallback: string) => {
+    if (typeof error === "object" && error !== null) {
+      if ("message" in error) {
+        const message = (error as { message?: unknown }).message;
+        if (typeof message === "string" && message.trim().length > 0) {
+          return message;
+        }
+      }
+
+      if ("response" in error) {
+        const response = (error as { response?: { data?: { message?: string } } }).response;
+        if (response?.data?.message) {
+          return response.data.message;
+        }
+      }
+    }
+
+    return fallback;
+  };
 
   useEffect(() => {
     void loadDeliveries();
     void loadDrivers();
+    void loadDashboardSummary();
+
+    const refreshInterval = window.setInterval(() => {
+      void loadDashboardSummary({ silent: true });
+    }, DASHBOARD_REFRESH_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(refreshInterval);
+    };
   }, []);
 
   const activeStep = useMemo(() => {
@@ -71,10 +109,32 @@ export default function DispatcherWorkflowDashboard() {
     try {
       const data = await driverService.available();
       setDrivers(data);
-    } catch {
-      setDriverError("Failed to load available drivers.");
+    } catch (error) {
+      setDriverError(getApiErrorMessage(error, "Failed to load available drivers."));
     } finally {
       setDriverLoading(false);
+    }
+  };
+
+  const loadDashboardSummary = async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (summaryRefreshInFlight.current) return;
+
+    summaryRefreshInFlight.current = true;
+    if (!silent) {
+      setSummaryLoading(true);
+    }
+
+    try {
+      const data = await dashboardService.summary();
+      setDashboardSummary(data);
+      setSummaryError("");
+    } catch {
+      setSummaryError("Dashboard metrics are temporarily unavailable.");
+    } finally {
+      summaryRefreshInFlight.current = false;
+      if (!silent) {
+        setSummaryLoading(false);
+      }
     }
   };
 
@@ -85,16 +145,30 @@ export default function DispatcherWorkflowDashboard() {
     setRouteLoading(true);
     setRouteError("");
     try {
-      const [alternatives, history] = await Promise.all([
+      const [alternativesResult, historyResult] = await Promise.allSettled([
         routeService.alternatives(origin, destination),
         routeService.history(origin, destination),
       ]);
-      setRouteAlternatives(alternatives);
-      setRouteHistory(history);
-    } catch {
-      setRouteError("Failed to load routes for selected delivery.");
-      setRouteAlternatives([]);
-      setRouteHistory([]);
+
+      if (alternativesResult.status === "fulfilled") {
+        setRouteAlternatives(alternativesResult.value);
+      } else {
+        setRouteAlternatives([]);
+      }
+
+      if (historyResult.status === "fulfilled") {
+        setRouteHistory(historyResult.value);
+      } else {
+        setRouteHistory([]);
+      }
+
+      if (alternativesResult.status === "rejected" && historyResult.status === "rejected") {
+        setRouteError(getApiErrorMessage(alternativesResult.reason, "Failed to load routes for selected delivery."));
+      } else if (alternativesResult.status === "rejected") {
+        setRouteError(getApiErrorMessage(alternativesResult.reason, "Failed to load live route alternatives."));
+      } else if (historyResult.status === "rejected") {
+        setRouteError(getApiErrorMessage(historyResult.reason, "Failed to load route history."));
+      }
     } finally {
       setRouteLoading(false);
     }
@@ -113,8 +187,8 @@ export default function DispatcherWorkflowDashboard() {
     try {
       const recommended = await deliveryService.recommendVehicles(delivery.id);
       setVehicles(recommended);
-    } catch {
-      setVehicleError("Failed to load vehicle recommendations.");
+    } catch (error) {
+      setVehicleError(getApiErrorMessage(error, "Failed to load vehicle recommendations."));
       setVehicles([]);
     } finally {
       setVehicleLoading(false);
@@ -124,6 +198,62 @@ export default function DispatcherWorkflowDashboard() {
   };
 
   const canConfirm = Boolean(selectedDelivery && selectedVehicle && selectedDriver && selectedRoute);
+
+  const summaryCards = useMemo(
+    () => [
+      {
+        label: "Total Deliveries",
+        value: dashboardSummary?.totalDeliveries ?? 0,
+        subtitle: "All tracked delivery orders",
+      },
+      {
+        label: "Active Deliveries",
+        value: dashboardSummary?.activeDeliveries ?? 0,
+        subtitle: "Assigned or in transit now",
+      },
+      {
+        label: "Completed Deliveries",
+        value: dashboardSummary?.completedDeliveries ?? 0,
+        subtitle: "Completed or delivered orders",
+      },
+      {
+        label: "Overdue Deliveries",
+        value: dashboardSummary?.overdueDeliveries ?? 0,
+        subtitle: "Past deadline and still open",
+      },
+      {
+        label: "Available Vehicles",
+        value: dashboardSummary?.availableVehicles ?? 0,
+        subtitle: "Ready for new assignments",
+      },
+      {
+        label: "Vehicles On Trip",
+        value: dashboardSummary?.vehiclesOnTrip ?? 0,
+        subtitle: "Currently active in operations",
+      },
+      {
+        label: "Available Drivers",
+        value: dashboardSummary?.availableDrivers ?? 0,
+        subtitle: "Within daily work-hour limits",
+      },
+      {
+        label: "Active Assignments",
+        value: dashboardSummary?.activeAssignments ?? 0,
+        subtitle: "Open dispatch assignments",
+      },
+    ],
+    [dashboardSummary],
+  );
+
+  const lastUpdatedLabel = useMemo(() => {
+    if (!dashboardSummary?.generatedAtUtc) return "Waiting for first refresh";
+
+    return new Date(dashboardSummary.generatedAtUtc).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  }, [dashboardSummary?.generatedAtUtc]);
 
   const handleConfirmAssignment = async () => {
     if (!selectedDelivery || !selectedVehicle || !selectedDriver || !selectedRoute) return;
@@ -140,8 +270,8 @@ export default function DispatcherWorkflowDashboard() {
 
       setShowConfirmModal(false);
       setSuccessMessage("Assignment created successfully.");
-    } catch {
-      setConfirmError("Failed to create assignment.");
+    } catch (error) {
+      setConfirmError(getApiErrorMessage(error, "Failed to create assignment."));
     } finally {
       setConfirmLoading(false);
     }
@@ -153,6 +283,35 @@ export default function DispatcherWorkflowDashboard() {
         <div className="page-header-left">
           <h1>Dispatcher Workflow</h1>
           <p>Select delivery, vehicle, driver, and route, then confirm assignment.</p>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header metric-summary-header">
+          <div>
+            <h2>Operations Snapshot</h2>
+            <p className="metric-summary-caption">Auto-refreshes every 15 seconds.</p>
+          </div>
+          <div className="metric-summary-actions">
+            <span className="metric-summary-timestamp">Last updated: {lastUpdatedLabel}</span>
+            <button type="button" className="btn btn-secondary" onClick={() => void loadDashboardSummary()} disabled={summaryLoading}>
+              {summaryLoading ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
+        </div>
+        <div className="card-body">
+          {summaryError ? <div className="alert alert-warning">{summaryError}</div> : null}
+          <div className="stats-grid">
+            {summaryCards.map((card) => (
+              <MetricCard
+                key={card.label}
+                label={card.label}
+                value={card.value}
+                subtitle={card.subtitle}
+                loading={summaryLoading && !dashboardSummary}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
