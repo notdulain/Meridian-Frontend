@@ -159,7 +159,49 @@ export interface RouteOptionDto {
   id: string;
   origin?: string;
   destination?: string;
+  routeId?: string;
+  summary?: string;
+  distance?: string;
+  distanceKm?: number;
+  distanceValue?: number;
+  duration?: string;
+  durationMinutes?: number;
+  durationValue?: number;
+  estimatedFuelCostLkr?: number;
+  fuelCost?: number;
+  fuelCostLkr?: number;
+  fuelConsumptionLitres?: number;
+  polyline?: string;
+  polylinePoints?: string;
+  selected?: boolean;
+  createdAt?: string;
+  isHistorical?: boolean;
+  rankScore?: number;
   [key: string]: unknown;
+}
+
+export interface RoutePlanningResultDto {
+  calculatedRoute?: RouteOptionDto;
+  historyRoutes: RouteOptionDto[];
+  suggestedRoutes: RouteOptionDto[];
+  comparison: RouteOptionDto[];
+}
+
+export interface SelectRoutePayloadDto {
+  origin: string;
+  destination: string;
+  vehicleId?: number;
+  driverId?: number;
+  route: {
+    routeId: string;
+    summary: string;
+    distance: string;
+    distanceValue: number;
+    duration: string;
+    durationValue: number;
+    fuelCost: number;
+    polylinePoints: string;
+  };
 }
 
 export interface TrackingLocationDto {
