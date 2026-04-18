@@ -5,10 +5,25 @@ import Link from "next/link";
 import { apiClient } from "@/lib/api/client";
 import type { AssignmentDto } from "@/lib/types";
 
+const CREATE_ASSIGNMENT_HREF = "/assignments/create";
+
+type AssignmentListItem = AssignmentDto & { status?: string };
+
+interface AssignmentApiItem {
+    id?: number;
+    assignmentId?: number;
+    deliveryId?: number;
+    vehicleId?: number;
+    driverId?: number;
+    assignedAt?: string;
+    assignedBy?: string;
+    status?: string;
+}
+
 interface AssignmentApiResponse {
     success: boolean;
-    data: any[];
-    meta: any;
+    data?: AssignmentApiItem[];
+    meta?: unknown;
 }
 
 function formatDate(iso: string) {
@@ -20,7 +35,7 @@ function formatDate(iso: string) {
 }
 
 export default function AssignmentsPage() {
-    const [assignments, setAssignments] = useState<(AssignmentDto & { status?: string })[]>([]);
+    const [assignments, setAssignments] = useState<AssignmentListItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [search, setSearch] = useState("");
@@ -46,21 +61,24 @@ export default function AssignmentsPage() {
 
     useEffect(() => {
         apiClient
-            .get<AssignmentApiResponse>("/assignment/api/assignments")
+            .get<AssignmentApiResponse | AssignmentApiItem[]>("/assignment/api/assignments")
             .then((res) => {
-                if (res.success && res.data) {
-                    const mapped = res.data.map((a: any) => ({
-                        id: a.id || a.assignmentId,
-                        deliveryId: a.deliveryId,
-                        vehicleId: a.vehicleId,
-                        driverId: a.driverId,
-                        assignedAt: a.assignedAt,
-                        assignedBy: a.assignedBy,
-                        status: a.status || "Active"
-                    }));
-                    setAssignments(mapped);
-                } else if (Array.isArray(res)) {
-                    setAssignments(res);
+                const source = Array.isArray(res) ? res : res.success ? res.data ?? [] : [];
+                const mapped = source
+                    .map((a) => ({
+                        id: a.id ?? a.assignmentId ?? 0,
+                        deliveryId: a.deliveryId ?? 0,
+                        vehicleId: a.vehicleId ?? 0,
+                        driverId: a.driverId ?? 0,
+                        assignedAt: a.assignedAt ?? "",
+                        assignedBy: a.assignedBy ?? "Unassigned",
+                        status: a.status || "Active",
+                    }))
+                    .filter((assignment) => assignment.id > 0);
+
+                setAssignments(mapped);
+                if (!Array.isArray(res) && !res.success) {
+                    setError("Failed to load assignments.");
                 }
             })
             .catch((err: unknown) =>
@@ -86,7 +104,9 @@ export default function AssignmentsPage() {
                     <h1>Assignments</h1>
                     <p>Vehicle and driver assignments to deliveries</p>
                 </div>
-                <button className="btn btn-primary">+ New Assignment</button>
+                <Link href={CREATE_ASSIGNMENT_HREF} className="btn btn-primary">
+                    + New Assignment
+                </Link>
             </div>
 
             {error && (
@@ -151,9 +171,9 @@ export default function AssignmentsPage() {
                                                 : "No assignments found."}
                                         </p>
                                         {!search && (
-                                            <button className="btn btn-primary" style={{ marginTop: 12 }}>
+                                            <Link href={CREATE_ASSIGNMENT_HREF} className="btn btn-primary" style={{ marginTop: 12 }}>
                                                 Create first assignment
-                                            </button>
+                                            </Link>
                                         )}
                                     </div>
                                 </td>
