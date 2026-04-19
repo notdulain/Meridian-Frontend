@@ -1,10 +1,7 @@
 import type { Page } from "@playwright/test";
 import { createMockToken, getCredentialsForRole } from "./auth-helper";
 
-const FIXED_TIMESTAMP = "2026-04-19T06:30:45.000Z";
-const FIXED_ASSIGNED_AT = "2026-04-19T12:15:00.000Z";
-
-const DASHBOARD_SUMMARY = {
+const DASHBOARD_SUMMARY_BASE = {
   totalDeliveries: 42,
   activeDeliveries: 9,
   completedDeliveries: 31,
@@ -14,7 +11,6 @@ const DASHBOARD_SUMMARY = {
   availableDrivers: 4,
   activeAssignments: 6,
   pendingDeliveries: 12,
-  generatedAtUtc: FIXED_TIMESTAMP,
 };
 
 const DELIVERIES = [
@@ -97,18 +93,6 @@ const ROUTE_HISTORY = [
   },
 ];
 
-const ASSIGNMENTS = [
-  {
-    id: "9001",
-    deliveryId: "DEL-1001",
-    vehicleId: "VEH-21",
-    driverId: "DRV-7",
-    assignedAt: FIXED_ASSIGNED_AT,
-    assignedBy: "Dispatcher One",
-    status: "Active",
-  },
-];
-
 const TRACKING_ASSIGNMENTS = [
   {
     assignmentId: 9001,
@@ -116,18 +100,6 @@ const TRACKING_ASSIGNMENTS = [
     driverId: 7,
     vehicleId: 21,
     status: "Active",
-  },
-];
-
-const TRACKING_HISTORY = [
-  {
-    locationUpdateId: 1,
-    assignmentId: 9001,
-    driverId: 7,
-    latitude: 6.9271,
-    longitude: 79.8612,
-    timestamp: FIXED_TIMESTAMP,
-    speedKmh: 32,
   },
 ];
 
@@ -139,7 +111,20 @@ function jsonResponse(body: unknown) {
   };
 }
 
-export async function mockDispatcherWorkflowApis(page: Page): Promise<void> {
+export async function mockDispatcherWorkflowApis(page: Page, referenceTime: Date = new Date()): Promise<void> {
+  const referenceIso = referenceTime.toISOString();
+  const trackingHistory = [
+    {
+      locationUpdateId: 1,
+      assignmentId: 9001,
+      driverId: 7,
+      latitude: 6.9271,
+      longitude: 79.8612,
+      timestamp: referenceIso,
+      speedKmh: 32,
+    },
+  ];
+
   await page.route("**/*", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -172,7 +157,10 @@ export async function mockDispatcherWorkflowApis(page: Page): Promise<void> {
     }
 
     if (method === "GET" && pathname === "/api/dashboard/summary") {
-      await route.fulfill(jsonResponse(DASHBOARD_SUMMARY));
+      await route.fulfill(jsonResponse({
+        ...DASHBOARD_SUMMARY_BASE,
+        generatedAtUtc: referenceIso,
+      }));
       return;
     }
 
@@ -209,9 +197,19 @@ export async function mockDispatcherWorkflowApis(page: Page): Promise<void> {
 
       await route.fulfill(jsonResponse({
         success: true,
-        data: ASSIGNMENTS,
+        data: [
+          {
+            id: "9001",
+            deliveryId: "DEL-1001",
+            vehicleId: "VEH-21",
+            driverId: "DRV-7",
+            assignedAt: referenceIso,
+            assignedBy: "Dispatcher One",
+            status: "Active",
+          },
+        ],
         meta: {
-          total: ASSIGNMENTS.length,
+          total: 1,
           page: 1,
           pageSize: 100,
         },
@@ -228,12 +226,12 @@ export async function mockDispatcherWorkflowApis(page: Page): Promise<void> {
     }
 
     if (method === "GET" && /^\/tracking\/api\/tracking\/assignment\/\d+\/history$/.test(pathname)) {
-      await route.fulfill(jsonResponse(TRACKING_HISTORY));
+      await route.fulfill(jsonResponse(trackingHistory));
       return;
     }
 
     if (method === "GET" && /^\/tracking\/api\/tracking\/driver\/\d+\/last-known$/.test(pathname)) {
-      await route.fulfill(jsonResponse(TRACKING_HISTORY[TRACKING_HISTORY.length - 1] ?? null));
+      await route.fulfill(jsonResponse(trackingHistory[trackingHistory.length - 1] ?? null));
       return;
     }
 
