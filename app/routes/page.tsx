@@ -4,12 +4,24 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import apiClient from "@/src/api/client";
 import { assignmentService } from "@/src/api/services/assignmentService";
 import { reportService } from "@/src/api/services/reportService";
+import { routeService } from "@/src/api/services/routeService";
 import { downloadBlobFile } from "@/src/lib/download";
-import type { AssignmentHistoryRowDto, FuelCostReportQuery, FuelCostReportRowDto } from "@/src/api/types/dtos";
+import type { AssignmentHistoryRowDto, FuelCostReportQuery, FuelCostReportRowDto, RouteOptionDto } from "@/src/api/types/dtos";
 
 interface VehicleRecord {
     vehicleId: number;
 }
+
+const routeExamples = [
+    "Bandaranaike International Airport, Katunayake",
+    "Dutch Hospital Shopping Precinct, Colombo Fort",
+    "Kandy City Centre, Sri Dalada Veediya, Kandy",
+    "University of Peradeniya, Peradeniya",
+    "Galle International Cricket Stadium, Galle",
+    "Matara Railway Station, Matara",
+    "Peliyagoda Fish Market Complex, Peliyagoda",
+    "Homagama Base Hospital, Homagama",
+];
 
 export default function RoutesPage() {
     const [rows, setRows] = useState<FuelCostReportRowDto[]>([]);
@@ -23,9 +35,63 @@ export default function RoutesPage() {
     const [crossRefLoading, setCrossRefLoading] = useState(false);
     const [crossRefError, setCrossRefError] = useState("");
     const [exportLoading, setExportLoading] = useState(false);
+    const [origin, setOrigin] = useState("");
+    const [destination, setDestination] = useState("");
+    const [routeVehicleId, setRouteVehicleId] = useState("");
+    const [routeDriverId, setRouteDriverId] = useState("");
+    const [routeLoading, setRouteLoading] = useState(false);
+    const [routeSelectLoading, setRouteSelectLoading] = useState(false);
+    const [routeError, setRouteError] = useState("");
+    const [routeSuccess, setRouteSuccess] = useState("");
+    const [calculatedRoute, setCalculatedRoute] = useState<RouteOptionDto | null>(null);
+    const [suggestedRoutes, setSuggestedRoutes] = useState<RouteOptionDto[]>([]);
+    const [historyRoutes, setHistoryRoutes] = useState<RouteOptionDto[]>([]);
+    const [comparisonRoutes, setComparisonRoutes] = useState<RouteOptionDto[]>([]);
+    const [selectedRouteId, setSelectedRouteId] = useState("");
 
     function toDateKey(value: string): string {
         return new Date(value).toISOString().slice(0, 10);
+    }
+
+    function getRouteId(route: RouteOptionDto, fallback: string): string {
+        return String(route.routeId ?? route.id ?? fallback);
+    }
+
+    function formatDistance(route: RouteOptionDto): string {
+        if (typeof route.distanceKm === "number") return `${route.distanceKm.toFixed(1)} km`;
+        if (typeof route.distance === "string" && route.distance.trim()) return route.distance;
+        if (typeof route.distanceValue === "number") return `${(route.distanceValue / 1000).toFixed(1)} km`;
+        return "Not available";
+    }
+
+    function formatDuration(route: RouteOptionDto): string {
+        if (typeof route.durationMinutes === "number") return `${route.durationMinutes} min`;
+        if (typeof route.duration === "string" && route.duration.trim()) return route.duration;
+        if (typeof route.durationValue === "number") return `${Math.round(route.durationValue / 60)} min`;
+        return "Not available";
+    }
+
+    function getFuelCost(route: RouteOptionDto): number | undefined {
+        if (typeof route.fuelCostLkr === "number") return route.fuelCostLkr;
+        if (typeof route.estimatedFuelCostLkr === "number") return route.estimatedFuelCostLkr;
+        if (typeof route.fuelCost === "number") return route.fuelCost;
+        return undefined;
+    }
+
+    function formatFuelCost(route: RouteOptionDto): string {
+        const fuelCost = getFuelCost(route);
+        return typeof fuelCost === "number"
+            ? `LKR ${fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            : "Not available";
+    }
+
+    function getApiErrorMessage(error: unknown, fallback: string): string {
+        if (typeof error === "object" && error !== null && "message" in error) {
+            const message = (error as { message?: unknown }).message;
+            if (typeof message === "string" && message.trim().length > 0) return message;
+        }
+
+        return fallback;
     }
 
     const loadAssignmentCrossReference = useCallback(async (fuelRows: FuelCostReportRowDto[], query?: FuelCostReportQuery) => {
@@ -185,6 +251,159 @@ export default function RoutesPage() {
         () => rows.reduce((sum, row) => sum + row.totalFuelCostLkr, 0),
         [rows],
     );
+
+    const selectableRoutes = useMemo(() => {
+        const routes: RouteOptionDto[] = [];
+        const seen = new Set<string>();
+
+        const addRoute = (route: RouteOptionDto | null, fallback: string) => {
+            if (!route) return;
+            const id = getRouteId(route, fallback);
+            if (seen.has(id)) return;
+            seen.add(id);
+            routes.push({ ...route, id, routeId: id });
+        };
+
+        addRoute(calculatedRoute, "calculated-route");
+        suggestedRoutes.forEach((route, index) => addRoute(route, `suggested-${index + 1}`));
+        historyRoutes.forEach((route, index) => addRoute(route, `history-${index + 1}`));
+        comparisonRoutes.forEach((route, index) => addRoute(route, `comparison-${index + 1}`));
+
+        return routes;
+    }, [calculatedRoute, comparisonRoutes, historyRoutes, suggestedRoutes]);
+
+    const selectedRoute = useMemo(
+        () => selectableRoutes.find((route) => getRouteId(route, "route") === selectedRouteId) ?? null,
+        [selectableRoutes, selectedRouteId],
+    );
+
+    const mapPreviewUrl = useMemo(() => {
+        if (!origin.trim() || !destination.trim()) return "";
+        return `https://maps.google.com/maps?q=${encodeURIComponent(`${origin.trim()} to ${destination.trim()}`)}&output=embed`;
+    }, [destination, origin]);
+
+    async function calculateAndCompareRoutes() {
+        const trimmedOrigin = origin.trim();
+        const trimmedDestination = destination.trim();
+
+        if (!trimmedOrigin || !trimmedDestination) {
+            setRouteError("Origin and destination are required.");
+            return;
+        }
+
+        if (trimmedOrigin.toLowerCase() === trimmedDestination.toLowerCase()) {
+            setRouteError("Destination must differ from origin.");
+            return;
+        }
+
+        setRouteLoading(true);
+        setRouteError("");
+        setRouteSuccess("");
+        setSelectedRouteId("");
+        setCalculatedRoute(null);
+        setSuggestedRoutes([]);
+        setHistoryRoutes([]);
+        setComparisonRoutes([]);
+
+        const [calculatedResult, comparisonResult] = await Promise.allSettled([
+            routeService.calculate(trimmedOrigin, trimmedDestination),
+            routeService.compare(trimmedOrigin, trimmedDestination),
+        ]);
+
+        if (calculatedResult.status === "fulfilled") {
+            setCalculatedRoute({
+                ...calculatedResult.value,
+                id: getRouteId(calculatedResult.value, "calculated-route"),
+                routeId: getRouteId(calculatedResult.value, "calculated-route"),
+                summary: calculatedResult.value.summary ?? "Calculated route",
+            });
+        }
+
+        if (comparisonResult.status === "fulfilled") {
+            setSuggestedRoutes(comparisonResult.value.suggestedRoutes);
+            setHistoryRoutes(comparisonResult.value.historyRoutes);
+            setComparisonRoutes(comparisonResult.value.comparison);
+
+            const bestRoute =
+                comparisonResult.value.comparison[0]
+                ?? comparisonResult.value.suggestedRoutes[0]
+                ?? comparisonResult.value.historyRoutes[0];
+
+            if (bestRoute) {
+                setSelectedRouteId(getRouteId(bestRoute, "best-route"));
+            }
+        }
+
+        if (calculatedResult.status === "fulfilled" && !selectedRouteId) {
+            setSelectedRouteId(getRouteId(calculatedResult.value, "calculated-route"));
+        }
+
+        if (calculatedResult.status === "rejected" && comparisonResult.status === "rejected") {
+            setRouteError(getApiErrorMessage(calculatedResult.reason, "Unable to calculate routes for those locations."));
+        } else if (calculatedResult.status === "rejected") {
+            setRouteError("Live route calculation is unavailable. Saved route history and comparison data are shown when available.");
+        } else if (comparisonResult.status === "rejected") {
+            setRouteError("Route comparison is unavailable. The calculated route is shown when available.");
+        }
+
+        setRouteLoading(false);
+    }
+
+    function buildSelectRoutePayload(route: RouteOptionDto) {
+        const distanceKm = typeof route.distanceKm === "number"
+            ? route.distanceKm
+            : typeof route.distanceValue === "number"
+                ? route.distanceValue / 1000
+                : 0;
+        const durationMinutes = typeof route.durationMinutes === "number"
+            ? route.durationMinutes
+            : typeof route.durationValue === "number"
+                ? Math.round(route.durationValue / 60)
+                : 0;
+        const fuelCost = getFuelCost(route) ?? 0;
+        const routeId = getRouteId(route, "selected-route");
+
+        return {
+            origin: origin.trim(),
+            destination: destination.trim(),
+            vehicleId: routeVehicleId ? Number(routeVehicleId) : undefined,
+            driverId: routeDriverId ? Number(routeDriverId) : undefined,
+            route: {
+                routeId,
+                summary: route.summary ?? `Route ${routeId}`,
+                distance: route.distance ?? `${distanceKm.toFixed(1)} km`,
+                distanceValue: route.distanceValue ?? Math.round(distanceKm * 1000),
+                duration: route.duration ?? `${durationMinutes} min`,
+                durationValue: route.durationValue ?? durationMinutes * 60,
+                fuelCost,
+                polylinePoints: route.polylinePoints ?? route.polyline ?? "",
+            },
+        };
+    }
+
+    async function saveSelectedRoute() {
+        if (!selectedRoute) {
+            setRouteError("Select a route before saving.");
+            return;
+        }
+
+        setRouteSelectLoading(true);
+        setRouteError("");
+        setRouteSuccess("");
+
+        try {
+            const saved = await routeService.select(buildSelectRoutePayload(selectedRoute));
+            setRouteSuccess(`Selected route saved. Route ID: ${getRouteId(saved, getRouteId(selectedRoute, "route"))}`);
+            const refreshed = await routeService.compare(origin.trim(), destination.trim());
+            setHistoryRoutes(refreshed.historyRoutes);
+            setSuggestedRoutes(refreshed.suggestedRoutes);
+            setComparisonRoutes(refreshed.comparison);
+        } catch (error) {
+            setRouteError(getApiErrorMessage(error, "Unable to save the selected route."));
+        } finally {
+            setRouteSelectLoading(false);
+        }
+    }
 
     const assignmentMatchCountByKey = useMemo(() => {
         const keyToAssignments = new Map<string, Set<number>>();
@@ -361,12 +580,171 @@ export default function RoutesPage() {
                 <div className="card-header">
                     <h2>Route Planner</h2>
                 </div>
-                <div className="card-body">
-                    <p className="text-sm text-zinc-500 mb-4">
-                        Select a delivery to view or optimize its route using Google Maps.
-                    </p>
-                    <div className="empty-state" style={{ padding: "40px 20px" }}>
-                        <p>Connect to the Route Service API to load route data.</p>
+                <div className="card-body" style={{ display: "grid", gap: 16 }}>
+                    {routeError ? <div className="alert alert-warning">{routeError}</div> : null}
+                    {routeSuccess ? <div className="alert alert-success">{routeSuccess}</div> : null}
+
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
+                        <div className="form-group">
+                            <label className="form-label">Origin <span className="required">*</span></label>
+                            <input
+                                className="form-input"
+                                value={origin}
+                                onChange={(event) => setOrigin(event.target.value)}
+                                list="route-origin-examples"
+                                placeholder="Pickup address"
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Destination <span className="required">*</span></label>
+                            <input
+                                className="form-input"
+                                value={destination}
+                                onChange={(event) => setDestination(event.target.value)}
+                                list="route-destination-examples"
+                                placeholder="Delivery address"
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Vehicle ID</label>
+                            <input
+                                className="form-input"
+                                type="number"
+                                min="1"
+                                value={routeVehicleId}
+                                onChange={(event) => setRouteVehicleId(event.target.value)}
+                                placeholder="Optional"
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Driver ID</label>
+                            <input
+                                className="form-input"
+                                type="number"
+                                min="1"
+                                value={routeDriverId}
+                                onChange={(event) => setRouteDriverId(event.target.value)}
+                                placeholder="Optional"
+                            />
+                        </div>
+                    </div>
+
+                    <datalist id="route-origin-examples">
+                        {routeExamples.map((example) => <option key={example} value={example} />)}
+                    </datalist>
+                    <datalist id="route-destination-examples">
+                        {routeExamples.map((example) => <option key={example} value={example} />)}
+                    </datalist>
+
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <button type="button" className="btn btn-primary" onClick={() => void calculateAndCompareRoutes()} disabled={routeLoading}>
+                            {routeLoading ? "Calculating..." : "Calculate and Compare Routes"}
+                        </button>
+                        <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={() => void saveSelectedRoute()}
+                            disabled={!selectedRoute || routeSelectLoading}
+                        >
+                            {routeSelectLoading ? "Saving..." : "Select Best Route"}
+                        </button>
+                    </div>
+
+                    {mapPreviewUrl ? (
+                        <div className="table-container" style={{ overflow: "hidden" }}>
+                            <iframe
+                                title="Route map preview"
+                                src={mapPreviewUrl}
+                                style={{ width: "100%", height: 320, border: 0, display: "block" }}
+                                loading="lazy"
+                            />
+                        </div>
+                    ) : null}
+
+                    <div className="stats-grid">
+                        <div className="stat-card">
+                            <p className="stat-label">Calculated Route</p>
+                            <p className="stat-value">{calculatedRoute ? formatDistance(calculatedRoute) : "--"}</p>
+                            <p className="stat-sub">{calculatedRoute ? formatDuration(calculatedRoute) : "Enter route details to calculate"}</p>
+                        </div>
+                        <div className="stat-card">
+                            <p className="stat-label">Route Options</p>
+                            <p className="stat-value">{selectableRoutes.length}</p>
+                            <p className="stat-sub">{suggestedRoutes.length} live, {historyRoutes.length} saved</p>
+                        </div>
+                        <div className="stat-card">
+                            <p className="stat-label">Best Estimate</p>
+                            <p className="stat-value">{selectedRoute ? formatFuelCost(selectedRoute) : "--"}</p>
+                            <p className="stat-sub">{selectedRoute ? selectedRoute.summary ?? "Selected route" : "No route selected"}</p>
+                        </div>
+                    </div>
+
+                    <div className="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Route</th>
+                                    <th>Source</th>
+                                    <th>Distance</th>
+                                    <th>Duration</th>
+                                    <th>Fuel Cost</th>
+                                    <th>Rank Score</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {routeLoading ? (
+                                    <tr>
+                                        <td colSpan={7}>Calculating route options...</td>
+                                    </tr>
+                                ) : selectableRoutes.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={7}>No route options calculated yet.</td>
+                                    </tr>
+                                ) : (
+                                    selectableRoutes.map((route, index) => {
+                                        const routeId = getRouteId(route, `route-${index + 1}`);
+                                        const isSelected = selectedRouteId === routeId;
+                                        const source = route.isHistorical === true
+                                            ? "Historical"
+                                            : historyRoutes.some((item) => getRouteId(item, "history") === routeId)
+                                                ? "Historical"
+                                                : suggestedRoutes.some((item) => getRouteId(item, "suggested") === routeId)
+                                                    ? "Suggested"
+                                                    : calculatedRoute && getRouteId(calculatedRoute, "calculated") === routeId
+                                                        ? "Calculated"
+                                                        : "Comparison";
+
+                                        return (
+                                            <tr key={`${routeId}-${index}`}>
+                                                <td>
+                                                    <strong>{route.summary ?? `Route ${index + 1}`}</strong>
+                                                    <div style={{ color: "var(--color-text-muted)", fontSize: 12 }}>#{routeId}</div>
+                                                </td>
+                                                <td>
+                                                    <span className={`badge ${source === "Historical" ? "badge-assigned" : source === "Suggested" ? "badge-active" : "badge-inuse"}`}>
+                                                        {source}
+                                                    </span>
+                                                </td>
+                                                <td>{formatDistance(route)}</td>
+                                                <td>{formatDuration(route)}</td>
+                                                <td>{formatFuelCost(route)}</td>
+                                                <td>{typeof route.rankScore === "number" ? route.rankScore.toFixed(2) : "--"}</td>
+                                                <td>
+                                                    <button
+                                                        type="button"
+                                                        className={`btn ${isSelected ? "btn-primary" : "btn-secondary"}`}
+                                                        onClick={() => setSelectedRouteId(routeId)}
+                                                    >
+                                                        {isSelected ? "Selected" : "Select"}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

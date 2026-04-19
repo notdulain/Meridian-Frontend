@@ -2,11 +2,71 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { AlertCircle, CheckCircle2, X } from "lucide-react";
 import type { AuthRole, LoginRequest, RegisterRequest } from "@/lib/types";
 import { authService } from "@/services/authService";
 import { useAuthStore } from "@/store/authStore";
 
 const ROLE_OPTIONS: AuthRole[] = ["Dispatcher", "Admin"];
+
+type FeedbackMessage = {
+    title: string;
+    message: string;
+};
+
+type SigninField = keyof LoginRequest;
+
+function AuthFeedback({
+    id,
+    title,
+    message,
+}: FeedbackMessage & { id?: string }) {
+    return (
+        <div id={id} className="auth-feedback auth-feedback-success" role="status" aria-live="polite">
+            <span className="auth-feedback-icon" aria-hidden="true">
+                <CheckCircle2 size={18} strokeWidth={2.3} />
+            </span>
+            <div className="auth-feedback-copy">
+                <p className="auth-feedback-title">{title}</p>
+                <p className="auth-feedback-message">{message}</p>
+            </div>
+        </div>
+    );
+}
+
+function AuthErrorModal({
+    title,
+    message,
+    onClose,
+}: FeedbackMessage & { onClose: () => void }) {
+    return (
+        <div className="auth-modal-backdrop" role="presentation" onMouseDown={onClose}>
+            <div
+                id="auth-error"
+                className="auth-modal"
+                role="alertdialog"
+                aria-modal="true"
+                aria-labelledby="auth-error-title"
+                aria-describedby="auth-error-message"
+                onMouseDown={(event) => event.stopPropagation()}
+            >
+                <button type="button" className="auth-modal-close" aria-label="Close error message" onClick={onClose}>
+                    <X size={16} strokeWidth={2.3} />
+                </button>
+                <span className="auth-modal-icon" aria-hidden="true">
+                    <AlertCircle size={22} strokeWidth={2.3} />
+                </span>
+                <div className="auth-modal-copy">
+                    <p id="auth-error-title" className="auth-modal-title">{title}</p>
+                    <p id="auth-error-message" className="auth-modal-message">{message}</p>
+                </div>
+                <button type="button" className="btn btn-primary auth-modal-action" onClick={onClose}>
+                    Try again
+                </button>
+            </div>
+        </div>
+    );
+}
 
 export default function LoginPage() {
     const router = useRouter();
@@ -21,8 +81,9 @@ export default function LoginPage() {
         role: "Dispatcher",
     });
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
+    const [error, setError] = useState<FeedbackMessage | null>(null);
+    const [success, setSuccess] = useState<FeedbackMessage | null>(null);
+    const [signinErrorFields, setSigninErrorFields] = useState<SigninField[]>([]);
 
     useEffect(() => {
         setHydrated();
@@ -100,38 +161,73 @@ export default function LoginPage() {
         if (typeof err !== "object" || err === null || !("response" in err)) return undefined;
         const response = (err as { response?: { data?: unknown } }).response;
         const data = response?.data;
-        if (typeof data === "string") return data;
+        if (typeof data === "string") return getSafeErrorMessage(data);
         if (typeof data === "object" && data !== null) {
             const maybeMessage = (data as { message?: unknown; error?: unknown }).message
                 ?? (data as { message?: unknown; error?: unknown }).error;
-            if (typeof maybeMessage === "string" && maybeMessage.trim().length > 0) return maybeMessage;
+            if (typeof maybeMessage === "string") return getSafeErrorMessage(maybeMessage);
         }
         return undefined;
     };
 
+    const getSafeErrorMessage = (message: string): string | undefined => {
+        const trimmed = message.replace(/\s+/g, " ").trim();
+        if (trimmed.length === 0 || trimmed.length > 180) return undefined;
+        if (/[{}<>]/.test(trimmed)) return undefined;
+        if (/exception|stack trace|axioserror|doctype|<html|^\s*at\s/i.test(trimmed)) return undefined;
+        return trimmed;
+    };
+
+    const clearFeedback = () => {
+        setError(null);
+        setSuccess(null);
+        setSigninErrorFields([]);
+    };
+
+    const showError = (title: string, message: string, fields: SigninField[] = []) => {
+        setError({ title, message });
+        setSuccess(null);
+        setSigninErrorFields(fields);
+    };
+
+    const closeError = useCallback(() => {
+        setError(null);
+    }, []);
+
+    useEffect(() => {
+        if (!error) return;
+
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") closeError();
+        };
+
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, [error, closeError]);
+
     const onSigninChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSigninForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-        setError("");
-        setSuccess("");
+        clearFeedback();
     };
 
     const onSignupChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setSignupForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-        setError("");
-        setSuccess("");
+        clearFeedback();
     };
 
     const handleSignInSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!signinForm.email || !signinForm.password) {
-            setError("Email and password are required.");
+            const missingFields: SigninField[] = [];
+            if (!signinForm.email) missingFields.push("email");
+            if (!signinForm.password) missingFields.push("password");
+            showError("Email and password are required", "Enter both details to continue.", missingFields);
             return;
         }
 
         setLoading(true);
-        setError("");
-        setSuccess("");
+        clearFeedback();
         try {
             const data = await authService.login(signinForm);
             const userRole = getRoleFromToken(data.accessToken) ?? resolveRole(undefined, signinForm.email);
@@ -140,9 +236,13 @@ export default function LoginPage() {
             redirectByRole(userRole);
         } catch (err: unknown) {
             if (getErrorStatus(err) === 401) {
-                setError("Invalid email or password.");
+                showError(
+                    "Incorrect email or password",
+                    "The credentials do not match a Meridian account. Check your email and password, then try again.",
+                    ["email", "password"],
+                );
             } else {
-                setError(getBackendErrorMessage(err) ?? "Unable to sign in. Please try again.");
+                showError("Sign in failed", "We could not reach Meridian right now. Check the service connection and try again.");
             }
         } finally {
             setLoading(false);
@@ -153,13 +253,12 @@ export default function LoginPage() {
         e.preventDefault();
 
         if (!signupForm.fullName || !signupForm.email || !signupForm.password || !signupForm.role) {
-            setError("Role, full name, email and password are required.");
+            showError("Registration needs attention", "Role, full name, email and password are required.");
             return;
         }
 
         setLoading(true);
-        setError("");
-        setSuccess("");
+        clearFeedback();
         try {
             const data = await authService.register(signupForm);
 
@@ -171,12 +270,12 @@ export default function LoginPage() {
                 return;
             }
 
-            setSuccess("Account created. Please sign in with your credentials.");
+            setSuccess({ title: "Account created", message: "Please sign in with your credentials." });
             setMode("signin");
             setSigninForm({ email: signupForm.email, password: "" });
             setSignupForm({ fullName: "", email: "", password: "", role: "Dispatcher" });
         } catch (err: unknown) {
-            setError(getBackendErrorMessage(err) ?? "Unable to create account. Please try again.");
+            showError("Account could not be created", getBackendErrorMessage(err) ?? "Unable to create account. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -222,8 +321,7 @@ export default function LoginPage() {
                                 style={{ flex: 1, justifyContent: "center" }}
                                 onClick={() => {
                                     setMode("signin");
-                                    setError("");
-                                    setSuccess("");
+                                    clearFeedback();
                                 }}
                             >
                                 Sign in
@@ -234,41 +332,44 @@ export default function LoginPage() {
                                 style={{ flex: 1, justifyContent: "center" }}
                                 onClick={() => {
                                     setMode("signup");
-                                    setError("");
-                                    setSuccess("");
+                                    clearFeedback();
                                 }}
                             >
                                 Sign up
                             </button>
                         </div>
 
-                        {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}
-                        {success && <div className="alert alert-success" style={{ marginBottom: 16 }}>{success}</div>}
+                        {error && <AuthErrorModal title={error.title} message={error.message} onClose={closeError} />}
+                        {success && <AuthFeedback title={success.title} message={success.message} />}
 
                         {mode === "signin" ? (
                             <form onSubmit={handleSignInSubmit} noValidate>
                                 <div className="form-group">
                                     <label className="form-label">Email <span className="required">*</span></label>
                                     <input
-                                        className="form-input"
+                                        className={`form-input ${signinErrorFields.includes("email") ? "form-input-error" : ""}`}
                                         type="email"
                                         name="email"
                                         value={signinForm.email}
                                         onChange={onSigninChange}
                                         placeholder="you@example.com"
                                         autoComplete="email"
+                                        aria-invalid={signinErrorFields.includes("email")}
+                                        aria-describedby={error ? "auth-error" : undefined}
                                     />
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Password <span className="required">*</span></label>
                                     <input
-                                        className="form-input"
+                                        className={`form-input ${signinErrorFields.includes("password") ? "form-input-error" : ""}`}
                                         type="password"
                                         name="password"
                                         value={signinForm.password}
                                         onChange={onSigninChange}
                                         placeholder="********"
                                         autoComplete="current-password"
+                                        aria-invalid={signinErrorFields.includes("password")}
+                                        aria-describedby={error ? "auth-error" : undefined}
                                     />
                                 </div>
                                 <button type="submit" className="btn btn-primary" style={{ width: "100%", justifyContent: "center", marginTop: 8 }} disabled={loading}>
