@@ -23,9 +23,28 @@ async function clickFirstWorkflowOption(page: Page, heading: string): Promise<vo
   await option.click();
 }
 
+function formatAssignmentTimestamp(value: Date): string {
+  return value.toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatDashboardTimestamp(value: Date): string {
+  return value.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
 test.describe("Dispatcher workflow UI", () => {
   test("shows the dispatcher dashboard after authentication", async ({ page }) => {
-    await mockDispatcherWorkflowApis(page);
+    const referenceTime = new Date();
+    await mockDispatcherWorkflowApis(page, referenceTime);
     await authenticateAsDispatcher(page);
 
     await page.goto("/dashboard/dispatcher");
@@ -33,13 +52,14 @@ test.describe("Dispatcher workflow UI", () => {
     await expect(page.getByRole("heading", { name: "Dispatcher Workflow" })).toBeVisible();
 
     await expect(page.getByText("Operations Snapshot")).toBeVisible();
-    await expect(page.locator(".metric-summary-timestamp")).toHaveText(/Last updated: \d{2}:\d{2}:\d{2}/);
+    await expect(page.locator(".metric-summary-timestamp")).toHaveText(`Last updated: ${formatDashboardTimestamp(referenceTime)}`);
 
     await saveTestScreenshot(page, "dispatcher-dashboard-after-sign-in.png");
   });
 
   test("checks the delivery assignment flow from the dispatcher dashboard", async ({ page }) => {
-    await mockDispatcherWorkflowApis(page);
+    const referenceTime = new Date();
+    await mockDispatcherWorkflowApis(page, referenceTime);
     await authenticateAsDispatcher(page);
 
     await page.goto("/dashboard/dispatcher");
@@ -64,7 +84,8 @@ test.describe("Dispatcher workflow UI", () => {
   });
 
   test("shows the dispatcher map with live telemetry markers", async ({ page }) => {
-    await mockDispatcherWorkflowApis(page);
+    const referenceTime = new Date();
+    await mockDispatcherWorkflowApis(page, referenceTime);
     await authenticateAsDispatcher(page);
 
     await page.goto("/tracking", { waitUntil: "domcontentloaded" });
@@ -79,20 +100,21 @@ test.describe("Dispatcher workflow UI", () => {
   });
 
   test("renders timestamp fields on the dashboard and assignments page", async ({ page }) => {
-    await mockDispatcherWorkflowApis(page);
+    const referenceTime = new Date();
+    await mockDispatcherWorkflowApis(page, referenceTime);
     await authenticateAsDispatcher(page);
 
     await page.goto("/dashboard/dispatcher");
     await expect(page).toHaveURL(/\/dashboard\/dispatcher$/);
     await expect(page.getByRole("heading", { name: "Dispatcher Workflow" })).toBeVisible();
 
-    await expect(page.locator(".metric-summary-timestamp")).toHaveText(/Last updated: \d{2}:\d{2}:\d{2}/);
+    await expect(page.locator(".metric-summary-timestamp")).toHaveText(`Last updated: ${formatDashboardTimestamp(referenceTime)}`);
 
     await page.goto("/assignments");
     await expect(page).toHaveURL(/\/assignments$/);
     await expect(page.getByRole("heading", { name: "Assignments" })).toBeVisible();
     await expect(page.getByText("Assigned At")).toBeVisible();
-    await expect(page.locator("tbody tr").first().locator("td").nth(5)).toHaveText(/\d{2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2}/);
+    await expect(page.locator("tbody tr").first().locator("td").nth(5)).toHaveText(formatAssignmentTimestamp(referenceTime));
 
     await saveTestScreenshot(page, "dispatcher-timestamps.png");
   });
