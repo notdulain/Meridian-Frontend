@@ -63,6 +63,34 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
 
+## Playwright Tests
+
+This project includes Playwright end-to-end tests for auth, dispatcher workflows, driver dashboards, and visual regression coverage.
+
+### Run the tests
+
+```bash
+npm run test:e2e
+```
+
+### Useful test commands
+
+```bash
+npm run test:e2e:headed
+npm run test:e2e:report
+npm run test:e2e:visual
+```
+
+### Test screenshots
+
+Some Playwright tests save screenshots to:
+
+```bash
+tests/e2e/screenshots/
+```
+
+These include dispatcher workflow screenshots and driver dashboard screenshots that can be used for visual review.
+
 ## Project Structure
 
 - `app/`: Next.js App Router containing pages and layouts.
